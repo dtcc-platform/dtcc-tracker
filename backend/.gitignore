@@ -4,3 +4,4 @@
 /backend_paper/staticfiles/
 *.pyc
 .idea/*
+venv
