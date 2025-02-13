@@ -25,6 +25,7 @@ export interface Paper{
   title:string
   journal:string
   date:string
+  additionalAuthors: string[]
 }
 
 export const paperSchema: Record<keyof Project, { required: boolean }> = {

@@ -3,13 +3,13 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ProjectForm from '@/components/ProjectForm'
-import { Paper, Project } from '../types/FixedTypes'
-import { fetchProjects, createProject} from '../utils/api'
+import { Project } from '../types/FixedTypes'
+import { createProject} from '../utils/api'
 import { useRefresh } from '@/app/hooks/RefreshContext'
 
 export default function SubmitPaper1Page() {
   const { triggerRefresh } = useRefresh();
-  const [newPaper, setPaper] = useState<Project>({
+  const [newProject, setPaper] = useState<Project>({
       authorName: '',
       doi: '',
       title: '',
@@ -46,8 +46,8 @@ export default function SubmitPaper1Page() {
 
     try {
       
-      console.log(newPaper)
-      await createProject(newPaper);
+      console.log(newProject)
+      await createProject(newProject);
     } catch (error: any) {
       setMessage(`Error: ${error.message}`)
     }
@@ -59,46 +59,46 @@ export default function SubmitPaper1Page() {
 
   return (
     <ProjectForm
-          authorName={newPaper.authorName}
+          authorName={newProject.authorName}
           setAuthorName={(value) => handleChange('authorName', value)}
-          doi={newPaper.doi}
+          doi={newProject.doi}
           setDoi={(value) => handleChange('doi', value)}
-          title={newPaper.title}
+          title={newProject.title}
           setTitle={(value) => handleChange('title', value)}
-          category={newPaper.category}
+          category={newProject.category}
           setCategory={(value) => handleChange('category', value)}
           categories={categories}
-          status={newPaper.status}
+          status={newProject.status}
           setStatus={(value) => handleChange('status', value)}
           statuses={statuses}
-          pi={newPaper.pi}
+          pi={newProject.pi}
           setPi={(value) => handleChange('pi', value)}
-          fundingBody={newPaper.fundingBody}
+          fundingBody={newProject.fundingBody}
           setFundingBody={(value) => handleChange('fundingBody', value)}
-          fundingProgram={newPaper.fundingProgram}
+          fundingProgram={newProject.fundingProgram}
           setFundingProgram={(value) => handleChange('fundingProgram', value)}
-          fundingCall={newPaper.fundingCall}
+          fundingCall={newProject.fundingCall}
           setFundingCall={(value) => handleChange('fundingCall', value)}
-          topic={newPaper.topic}
+          topic={newProject.topic}
           setTopic={(value) => handleChange('topic', value)}
-          link={newPaper.link}
+          link={newProject.link}
           setLink={(value) => handleChange('link', value)}
-          submissionDeadline={newPaper.submissionDeadline}
+          submissionDeadline={newProject.submissionDeadline}
           setSubmissionDeadline={(value) => handleChange('submissionDeadline', value)}
-          amount={newPaper.amount}
+          amount={newProject.amount}
           setAmount={(value) => handleChange('amount', value)}
-          year={newPaper.year}
+          year={newProject.year}
           setYear={(value) => handleChange('year', value)}
-          period={newPaper.period}
+          period={newProject.period}
           setPeriod={(value) => handleChange('period', value)}
-          typeOfEngagement={newPaper.typeOfEngagement}
+          typeOfEngagement={newProject.typeOfEngagement}
           setTypeOfEngagement={(value) => handleChange('typeOfEngagement', value)}
           typesOfEngagement={typesOfEngagement}
-          notes={newPaper.notes}
+          notes={newProject.notes}
           setNotes={(value) => handleChange('notes', value)}
-          documents={newPaper.documents}
+          documents={newProject.documents}
           setDocuments={(value) => handleChange('documents', value)}
-          slug={newPaper.slug}
+          slug={newProject.slug}
           setSlug={(value) => handleChange('slug', value)}
           onSubmit={handleSubmit}
           message={message}

@@ -3,10 +3,11 @@ import { NextResponse } from "next/server";
 export async function DELETE(request: Request, props: { params: Promise<{ doi: string }> }) {
     const params = await props.params;
     const { doi } = params;
-    console.log(doi)
+    const encodedDoi = encodeURIComponent(doi);
+    console.log(`http://127.0.0.1:8000/api/papers/delete/${encodedDoi}/`)
 
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/papers/delete/${doi}/`, {
+        const response = await fetch(`http://127.0.0.1:8000/api/papers/delete/${encodedDoi}/`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',

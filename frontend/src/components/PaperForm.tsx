@@ -1,162 +1,155 @@
-import React from 'react'
+'use client';
+
+import React from 'react';
+import { useRouter } from 'next/navigation';
 
 interface PaperFormProps {
-  authorName: string
-  setAuthorName: (value: string) => void
-  doi: string
-  setDoi: (value: string) => void
-  title: string
-  setTitle: (value: string) => void
-  journal: string
-  setJournal: (value: string) => void
-  date: string
-  setDate: (value: string) => void
-  onSubmit: (e: React.FormEvent) => void
-  message: string
+    authorName: string;
+    setAuthorName: (value: string) => void;
+    doi: string;
+    setDoi: (value: string) => void;
+    title: string;
+    setTitle: (value: string) => void;
+    journal: string;
+    setJournal: (value: string) => void;
+    date: string;
+    setDate: (value: string) => void;
+    additionalAuthors: string[];
+    setAdditionalAuthors: (value: string[]) => void;
+    onSave: () => void;
+    onBack: () => void;
 }
 
-export default function ProjectForm({
-  authorName,
-  setAuthorName,
-  doi,
-  setDoi,
-  title,
-  setTitle,
-  journal,
-  setJournal,
-  date,
-  setDate,
-  onSubmit,
-  message,
-}: PaperFormProps) {
-  return (
-    <div style={containerStyle}>
-      <div style={formBoxStyle}>
-        <form onSubmit={onSubmit} style={formStyle}>
-          <h2 style={headerStyle}>Project Information </h2>
-              <label style={labelStyle}>Author Name*</label>
-              <input
-                type="text"
-                value={authorName}
-                onChange={(e) => setAuthorName(e.target.value)}
-                required
-                style={inputStyle}
-              />
-              <label style={labelStyle}>DOI*</label>
-              <input
-                type="text"
-                value={doi}
-                onChange={(e) => setDoi(e.target.value)}
-                required
-                style={inputStyle}
-              />
-              <label style={labelStyle}>Title*</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                style={inputStyle}
-              />
-              <label style={labelStyle}>Journal</label>
-              <input
-                type="text"
-                value={journal}
-                onChange={(e) => setJournal(e.target.value)}
-                required
-                style={inputStyle}
-              />
-              <label style={labelStyle}>Date</label>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                required
-                style={inputStyle}
-              />
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2rem' }}>
-          <button
-            type="button"
-            style={{
-              ...buttonStyle,
-              backgroundColor: '#ccc',
-              color: '#000',
-              border: '1px solid #aaa',
-            }}
-            onClick={() => window.location.href = '/'}
-          >
-            Cancel
-          </button>
-          <button type="submit" style={buttonStyle}>
-            Save
-          </button>
+const PaperForm: React.FC<PaperFormProps> = ({
+    authorName,
+    setAuthorName,
+    doi,
+    setDoi,
+    title,
+    setTitle,
+    journal,
+    setJournal,
+    date,
+    setDate,
+    additionalAuthors,
+    setAdditionalAuthors,
+    onSave,
+    onBack,
+}) => {
+    const router = useRouter();
+
+    const addAuthor = () => {
+        setAdditionalAuthors([...additionalAuthors, '']);
+    };
+
+    const removeAuthor = (index: number) => {
+        const updatedAuthors = additionalAuthors.filter((_, i) => i !== index);
+        setAdditionalAuthors(updatedAuthors);
+    };
+
+    const handleAuthorChange = (index: number, value: string) => {
+        const updatedAuthors = [...additionalAuthors];
+        updatedAuthors[index] = value;
+        setAdditionalAuthors(updatedAuthors);
+    };
+
+    return (
+        <div className="flex flex-col items-center justify-center h-screen bg-gray-100 p-4">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+                <h1 className="text-center text-xl font-bold mb-4">Paper Details</h1>
+
+                <div className="flex flex-col gap-3">
+                    <label className="block">
+                        <strong>Author Name:</strong>
+                        <input
+                            type="text"
+                            value={authorName}
+                            onChange={(e) => setAuthorName(e.target.value)}
+                            className="w-full p-2 border border-blue-500 rounded mt-1"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <strong>DOI:</strong>
+                        <input
+                            type="text"
+                            value={doi}
+                            onChange={(e) => setDoi(e.target.value)}
+                            className="w-full p-2 border border-blue-500 rounded mt-1"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <strong>Title:</strong>
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="w-full p-2 border border-blue-500 rounded mt-1"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <strong>Journal:</strong>
+                        <input
+                            type="text"
+                            value={journal}
+                            onChange={(e) => setJournal(e.target.value)}
+                            className="w-full p-2 border border-blue-500 rounded mt-1"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <strong>Published Date:</strong>
+                        <input
+                            type="date"
+                            value={date}
+                            onChange={(e) => setDate(e.target.value)}
+                            className="w-full p-2 border border-blue-500 rounded mt-1"
+                        />
+                    </label>
+
+                    {/* Additional Authors */}
+                    <div>
+                        <strong>Additional Authors:</strong>
+                        {additionalAuthors.map((author, index) => (
+                            <div key={index} className="flex items-center mt-2 space-x-2">
+                                <input
+                                    type="text"
+                                    value={author}
+                                    onChange={(e) => handleAuthorChange(index, e.target.value)}
+                                    className="w-full p-2 border border-blue-500 rounded"
+                                    placeholder={`Author ${index + 2}`}
+                                />
+                                <button
+                                    onClick={() => removeAuthor(index)}
+                                    className="bg-red-500 text-white px-2 py-1 rounded-full text-lg"
+                                >
+                                    −
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            onClick={addAuthor}
+                            className="mt-2 bg-green-500 text-white px-2 py-1 rounded-full text-lg"
+                        >
+                            +
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex justify-between mt-5">
+                    <button onClick={onBack} className="bg-gray-500 text-white px-4 py-2 rounded">
+                        Back
+                    </button>
+
+                    <button onClick={onSave} className="bg-blue-500 text-white px-4 py-2 rounded">
+                        Save
+                    </button>
+                </div>
+            </div>
         </div>
-        </form>
-        {message && <p style={{ marginTop: '1rem' }}>{message}</p>}
-      </div>
-    </div>
-  );
-}
-
-const containerStyle: React.CSSProperties = {
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  padding: '2rem',
-  backgroundColor: '#f4f4f4',
-  minHeight: '100vh',
+    );
 };
 
-const formBoxStyle: React.CSSProperties = {
-  width: '90%',
-  maxWidth: '1200px',
-  backgroundColor: '#fff',
-  padding: '2rem',
-  borderRadius: '8px',
-  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-};
-
-const formStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '1.5rem',
-};
-
-const gridContainerStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
-  gap: '1rem',
-};
-
-const gridColumnStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '0.5rem',
-};
-
-const labelStyle: React.CSSProperties = {
-  fontWeight: 'bold',
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: '0.5rem',
-  borderRadius: '4px',
-  border: '1px solid #ccc',
-  width: '100%',
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: '0.75rem 1.5rem',
-  backgroundColor: '#0070f3',
-  color: '#fff',
-  border: 'none',
-  borderRadius: '4px',
-  cursor: 'pointer',
-  fontWeight: 'bold',
-};
-
-const headerStyle: React.CSSProperties = {
-  textAlign: 'center',
-  marginBottom: '1.5rem',
-};
-
+export default PaperForm;
