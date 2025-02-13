@@ -1,3 +1,4 @@
+from urllib.parse import unquote
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -36,6 +37,8 @@ class PaperListCreateView(APIView):
     
 class PaperDeleteView(APIView):
     def delete(self, request, doi):
+        decoded_doi = unquote(doi)  # Decode the DOI
+        print(f"Received DOI: {decoded_doi}")  # Debugging
         paper = get_object_or_404(Paper, doi=doi)  # Use doi instead of id
         paper.delete()
         return JsonResponse({"message": "Project deleted successfully"}, status=200)
@@ -104,6 +107,8 @@ class ProjectUpdateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
+import requests
+
 def fetch_doi_metadata(doi):
     base_url = "https://api.crossref.org/works/"
     response = requests.get(base_url + doi)
@@ -117,16 +122,9 @@ def fetch_doi_metadata(doi):
             authors_data = message.get('author', [])
 
             if authors_data:
-                main_author = {
-                    "first_name": authors_data[0].get('given', 'N/A'),
-                    "last_name": authors_data[0].get('family', 'N/A')
-                }
-
+                main_author = f"{authors_data[0].get('given', 'N/A')} {authors_data[0].get('family', 'N/A')}"
                 additional_authors = [
-                    {
-                        "first_name": author.get('given', 'N/A'),
-                        "last_name": author.get('family', 'N/A')
-                    }
+                    f"{author.get('given', 'N/A')} {author.get('family', 'N/A')}"
                     for author in authors_data[1:]
                 ]
             else:

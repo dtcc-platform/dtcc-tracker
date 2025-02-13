@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import { createPaper, fetchDoiMetadata } from '../utils/api';
 import { Paper } from '../types/FixedTypes';
 import { useRefresh } from '@/app/hooks/RefreshContext';
+import PaperForm from '@/components/PaperForm';
+
 
 const InputPage: React.FC = () => {
     const [manualInput, setManualInput] = useState(false);
@@ -13,13 +15,14 @@ const InputPage: React.FC = () => {
         doi: '',
         journal: '',
         date: '',
-        title: ''
+        title: '',
+        additionalAuthors: []
     });
-
+    const [additionalAuthors, setAdditionalAuthors] = useState<string[]>([]);
     const { triggerRefresh } = useRefresh();
     const router = useRouter();
 
-    const handleChange = (key: keyof Paper, value: string) => {
+    const handleChange = (key: keyof Paper, value: string | string[]) => {
         setPaper((prev) => ({ ...prev, [key]: value }));
         setError(null); // Clear error when user starts typing
     };
@@ -169,92 +172,28 @@ const InputPage: React.FC = () => {
                             Crossref Retrieve
                         </button>
                     </div>
-                ) : (
-                    <div
-                        style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            marginBottom: '10px',
-                        }}
-                    >
-                        <button
-                            onClick={handleBack}
-                            style={{
-                                padding: '8px 12px',
-                                backgroundColor: '#95a5a6',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                display: 'block',
-                                margin: '10px auto',
-                            }}
-                        >
-                            Back
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            style={{
-                                padding: '8px 12px',
-                                backgroundColor: '#2ecc71',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                display: 'block',
-                                margin: '10px auto',
-                            }}
-                        >
-                            Save
-                        </button>
+                 ) : (
+                    <div>
                     </div>
                 )}
 
                 {manualInput && (
-                    <div style={{ marginTop: '20px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <input
-                                type="text"
-                                name="journal"
-                                value={paper.journal}
-                                onChange={(e) => handleChange('journal', e.target.value)}
-                                placeholder="Journal"
-                                style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                            />
-                            <input
-                                type="text"
-                                name="doi"
-                                value={paper.doi}
-                                onChange={(e) => handleChange('doi', e.target.value)}
-                                placeholder="DOI"
-                                style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                            />
-                            <input
-                                type="text"
-                                name="title"
-                                value={paper.title}
-                                onChange={(e) => handleChange('title', e.target.value)}
-                                placeholder="Title"
-                                style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                            />
-                            <input
-                                type="text"
-                                name="authors"
-                                value={paper.authorName}
-                                onChange={(e) => handleChange('authorName', e.target.value)}
-                                placeholder="Authors"
-                                style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                            />
-                            <input
-                                type="date"
-                                name="publishedOn"
-                                value={paper.date}
-                                onChange={(e) => handleChange('date', e.target.value)}
-                                placeholder="Published On"
-                                style={{ padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}
-                            />
-                        </div>
-                    </div>
+                    <PaperForm
+                        authorName={paper.authorName}
+                        setAuthorName={(value) => handleChange('authorName', value)}
+                        doi={paper.doi}
+                        setDoi={(value) => handleChange('doi', value)}
+                        title={paper.title}
+                        setTitle={(value) => handleChange('title', value)}
+                        journal={paper.journal}
+                        setJournal={(value) => handleChange('journal', value)}
+                        date={paper.date}
+                        setDate={(value) => handleChange('date', value)}
+                        additionalAuthors={paper.additionalAuthors}
+                        setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
+                        onSave={handleSave}
+                        onBack={handleBack}
+                />
                 )}
             </div>
         </div>
