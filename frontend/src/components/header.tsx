@@ -45,28 +45,32 @@ const Header: React.FC = () => {
         height: `${HEADER_HEIGHT}px`,
       }}>
       <div className="flex items-center px-4 py-3">
-        {/* Left side: Image and button */}
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-4">
-            <Image src={dtcc_logo} alt="Logo" className="max-w-[80px] h-auto object-contain" />
-            <Image src={chalmers_logo} alt="Chalmers" className="max-w-[80px] h-auto object-contain" />
-          </div>
+        {/* Left side: dtcc logo only */}
+        <div className="flex items-center">
+          <Image
+            src={dtcc_logo}
+            alt="DTCC Logo"
+            className="max-w-[80px] h-auto object-contain"
+          />
         </div>
 
-        {/* Right side: Log out button */}
-        <div className="flex items-center ml-auto">
-          <Link href='/login'>
-          <button
-            className="px-2 py-1 font-semibold text-gray-700 bg-white border border-gray-500 rounded-md cursor-pointer hover:bg-gray-100"
-          >
-            Log out
-          </button>
+        {/* Right side: Chalmers logo and Log out button */}
+        <div className="flex items-center ml-auto space-x-4">
+          <Image
+            src={chalmers_logo}
+            alt="Chalmers Logo"
+            className="max-w-[80px] h-auto object-contain"
+          />
+          <Link href="/login">
+            <button className="px-2 py-1 font-semibold text-gray-700 bg-white border border-gray-500 rounded-md cursor-pointer hover:bg-gray-100">
+              Log out
+            </button>
           </Link>
-            
-          </div>
         </div>
-    </div>
-    </div>
+      </div>
+
+        </div>
+      </div>
   );
 };
 
