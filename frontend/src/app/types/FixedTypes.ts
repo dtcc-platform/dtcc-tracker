@@ -1,3 +1,4 @@
+
 export interface Project {
   authorName: string
   doi: string
@@ -49,3 +50,4 @@ export const paperSchema: Record<keyof Project, { required: boolean }> = {
   documents: { required: false },
   slug: { required: false },
 };
+export const BASE_URL = `${process.env.REACT_APP_API_BASE_URL}/api/`
