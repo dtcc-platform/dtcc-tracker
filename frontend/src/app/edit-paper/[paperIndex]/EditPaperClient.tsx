@@ -63,7 +63,7 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
         title={newPaper.title}
         setTitle={(value) => handleChange('title', value)}
         date={newPaper.date}
-        setDate={(value) => handleChange('authorName', value)}
+        setDate={(value) => handleChange('date', value)}
         journal={newPaper.journal}
         setJournal={(value) => handleChange('journal', value)}
         additionalAuthors={newPaper.additionalAuthors}
