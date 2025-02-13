@@ -79,7 +79,7 @@ const ResultPage: React.FC = () => {
             date={retrievedPaper.date}
             setDate={(value) => handleChange('date', value)}
             additionalAuthors={retrievedPaper.additionalAuthors}
-            setAdditionalAuthors={(value) => handleChange('date', value)}
+            setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
             onSave={handleSave}
             onBack={handleBack}
         />
