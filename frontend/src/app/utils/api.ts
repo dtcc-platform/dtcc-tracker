@@ -61,7 +61,8 @@ export const createProject = async (paper: Partial<Project>) => {
 
 export const deleteProject = async (projectDoi: string) => {
   try {
-      const response = await fetch(`/api/projects/${projectDoi}`, {
+    const encodedDoi = encodeURIComponent(projectDoi);
+      const response = await fetch(`/api/projects/${encodedDoi}`, {
           method: 'DELETE',
           headers: {
               'Content-Type': 'application/json',
@@ -82,7 +83,8 @@ export const deleteProject = async (projectDoi: string) => {
 
 export const updateProject = async (oldDoi: string, project: Partial<Project>) => {
   const snakeProject = camelToSnakeCase(project)
-  const response = await fetch(`/api/projects/${oldDoi}`, {
+  const encodedDoi = encodeURIComponent(oldDoi);
+  const response = await fetch(`/api/projects/${encodedDoi}`, {
       method: "PUT",
       headers: {
           "Content-Type": "application/json",
@@ -135,12 +137,13 @@ export const createPaper = async (paper: Partial<Paper>) => {
 
 export const deletePaper = async (paperDoi: string) => {
   try {
-      const response = await fetch(`/api/papers/${paperDoi}`, {
-          method: 'DELETE',
-          headers: {
-              'Content-Type': 'application/json',
-          },
-      });
+    const encodedDoi = encodeURIComponent(paperDoi);
+    const response = await fetch(`/api/papers/${encodedDoi}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    });
 
       if (!response.ok) {
           throw new Error(`Error: ${response.status}`);
@@ -156,7 +159,8 @@ export const deletePaper = async (paperDoi: string) => {
 
 export const updatePaper = async (oldDoi: string, paper: Partial<Paper>) => {
   const snakePaper = camelToSnakeCase(paper)
-  const response = await fetch(`/api/papers/${oldDoi}`, {
+  const encodedDoi = encodeURIComponent(oldDoi);
+  const response = await fetch(`/api/papers/${encodedDoi}`, {
       method: "PUT",
       headers: {
           "Content-Type": "application/json",

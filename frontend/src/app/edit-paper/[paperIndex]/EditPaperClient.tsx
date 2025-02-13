@@ -20,20 +20,17 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
     doi: paper.doi|| '-',
     title: paper.title|| '-',
     journal: paper.journal,
-    date: paper.date
+    date: paper.date,
+    additionalAuthors: paper.additionalAuthors
+    
   })
 
-  const handleChange = (key: keyof Paper, value: string) => {
+  const handleChange = (key: keyof Paper, value: string| string[]) => {
     setNewPaper((prev) => ({ ...prev, [key]: value }))
   }
   const [message, setMessage] = useState('')
 
-  const categories = ['Category 1', 'Category 2', 'Category 3']
-  const statuses = ['Draft', 'Submitted', 'Approved']
-  const typesOfEngagement = ['Type 1', 'Type 2', 'Type 3']
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     setMessage('')
   
     try {
@@ -51,7 +48,9 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
       }
     }
   }
-  
+  const handleBack = () => {
+    router.back(); // This navigates to the previous page in history
+  };
 
   return (
     <div>
@@ -63,12 +62,14 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
         setDoi={(value) => handleChange('doi', value)}
         title={newPaper.title}
         setTitle={(value) => handleChange('title', value)}
-        message={message}
         date={newPaper.date}
         setDate={(value) => handleChange('authorName', value)}
         journal={newPaper.journal}
-        setJournal={(value) => handleChange('doi', value)}
-        onSubmit={handleSubmit}      />
+        setJournal={(value) => handleChange('journal', value)}
+        additionalAuthors={newPaper.additionalAuthors}
+        setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
+        onSave={handleSubmit}
+        onBack={handleBack}     />
     </div>
   )
   

@@ -1,223 +1,88 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-
-interface Author {
-    first_name: string;
-    last_name: string;
-}
+import { useSearchParams } from 'next/navigation';
+import PaperForm from '@/components/PaperForm';
+import { Paper } from '../types/FixedTypes';
+import { useRouter } from 'next/navigation';
+import { createPaper } from '../utils/api';
+import { useRefresh } from '../hooks/RefreshContext';
 
 const ResultPage: React.FC = () => {
     const searchParams = useSearchParams();
-    const router = useRouter();
+    const {triggerRefresh} = useRefresh()
+    // Individual state values
+    const router = useRouter()
+    const [error, setError] = useState<string | null>(null); // New state for error message
+    let parsedAuthors: { "Main Author": string; "Additional Authors": string[] } = 
+        { "Main Author": '', "Additional Authors": [] };
 
-    const [journal, setJournal] = useState(searchParams.get('journal') || 'N/A');
-    const [doi, setDoi] = useState(searchParams.get('doi') || 'N/A');
-    const [title, setTitle] = useState(searchParams.get('title') || 'N/A');
-    const [publishedOn, setPublishedOn] = useState(searchParams.get('publishedOn') || 'N/A');
-    const [publisher, setPublisher] = useState(searchParams.get('publisher') || 'N/A');
+    try {
+        const authorsInput = searchParams.get('authors');
+        parsedAuthors = authorsInput ? JSON.parse(authorsInput) : { "Main Author": '', "Additional Authors": [] };
+    } catch (error) {
+        console.error('Failed to parse authors:', error);
+    }
+    const [retrievedPaper, setRetrievedPaper] = useState<Paper>({
+        authorName: parsedAuthors["Main Author"] || '',
+        doi: searchParams.get('doi') || '',
+        journal: searchParams.get('journal') || '',
+        date: searchParams.get('publishedOn') || '',
+        title: searchParams.get('title') || '',
+        additionalAuthors: parsedAuthors["Additional Authors"]
+    })
+    console.log(retrievedPaper)
+    const handleChange = (key: keyof Paper, value: string | string[]) => {
+          setRetrievedPaper((prev) => ({ ...prev, [key]: value }))
+        }
 
-    const authorsInput = searchParams.get('authors');
-    const parsedAuthors = authorsInput
-        ? JSON.parse(authorsInput)
-        : { "Main Author": { first_name: 'N/A', last_name: 'N/A' }, "Additional Authors": [] };
 
-    const [mainAuthor, setMainAuthor] = useState(parsedAuthors["Main Author"]);
-    const [additionalAuthors, setAdditionalAuthors] = useState(parsedAuthors["Additional Authors"]);
-
-    const handleAuthorChange = (index: number, key: string, value: string) => {
-        const updatedAuthors = [...additionalAuthors];
-        updatedAuthors[index] = { ...updatedAuthors[index], [key]: value };
-        setAdditionalAuthors(updatedAuthors);
-    };
-
-    const handleMainAuthorChange = (key: string, value: string) => {
-        setMainAuthor({ ...mainAuthor, [key]: value });
-    };
-
+        
+        
+    const handleSave = async () => {
+            try {
+                const response = await createPaper(retrievedPaper);
+                console.log(response)
+                if (response.error) {
+                    if (response.error === ("DOI already exists")) {
+                        setError("This DOI already exists."); // Set error message
+                    }
+                } else {
+                    triggerRefresh();
+                    router.push('/');
+                }
+            } catch (error) {
+                console.error('Error saving paper:', error);
+                setError('An error occurred while saving.'); // Generic error
+            }
+        };
     const handleBack = () => {
-        router.push('/');
+        router.back();
     };
 
     return (
-        <div
-            style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100vh',
-                backgroundColor: '#f5f5f5',
-                padding: '20px',
-            }}
-        >
-            <div
-                style={{
-                    backgroundColor: '#fff',
-                    padding: '20px',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                    maxWidth: '400px',
-                    width: '100%',
-                }}
-            >
-                <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Result</h1>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div>
-                        <strong>Journal:</strong>
-                        <input
-                            type="text"
-                            value={journal}
-                            onChange={(e) => setJournal(e.target.value)}
-                            style={{
-                                display: 'block',
-                                width: '100%',
-                                padding: '5px',
-                                border: '2px solid #3498db',
-                                borderRadius: '4px',
-                                marginTop: '5px',
-                            }}
-                        />
-                    </div>
-                    <div>
-                        <strong>DOI:</strong>
-                        <input
-                            type="text"
-                            value={doi}
-                            onChange={(e) => setDoi(e.target.value)}
-                            style={{
-                                display: 'block',
-                                width: '100%',
-                                padding: '5px',
-                                border: '2px solid #3498db',
-                                borderRadius: '4px',
-                                marginTop: '5px',
-                            }}
-                        />
-                    </div>
-                    <div>
-                        <strong>Title:</strong>
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            style={{
-                                display: 'block',
-                                width: '100%',
-                                padding: '5px',
-                                border: '2px solid #3498db',
-                                borderRadius: '4px',
-                                marginTop: '5px',
-                            }}
-                        />
-                    </div>
-                    <div>
-                        <strong>Published On:</strong>
-                        <input
-                            type="text"
-                            value={publishedOn}
-                            onChange={(e) => setPublishedOn(e.target.value)}
-                            style={{
-                                display: 'block',
-                                width: '100%',
-                                padding: '5px',
-                                border: '2px solid #3498db',
-                                borderRadius: '4px',
-                                marginTop: '5px',
-                            }}
-                        />
-                    </div>
-                    <div>
-                        <strong>Publisher:</strong>
-                        <input
-                            type="text"
-                            value={publisher}
-                            onChange={(e) => setPublisher(e.target.value)}
-                            style={{
-                                display: 'block',
-                                width: '100%',
-                                padding: '5px',
-                                border: '2px solid #3498db',
-                                borderRadius: '4px',
-                                marginTop: '5px',
-                            }}
-                        />
-                    </div>
-                    <div>
-                        <strong>Main Author:</strong>
-                        <div>
-                            <input
-                                type="text"
-                                value={mainAuthor.first_name}
-                                onChange={(e) => handleMainAuthorChange('first_name', e.target.value)}
-                                placeholder="First Name"
-                                style={{
-                                    marginRight: '10px',
-                                    padding: '5px',
-                                    border: '2px solid #3498db',
-                                    borderRadius: '4px',
-                                }}
-                            />
-                            <input
-                                type="text"
-                                value={mainAuthor.last_name}
-                                onChange={(e) => handleMainAuthorChange('last_name', e.target.value)}
-                                placeholder="Last Name"
-                                style={{
-                                    padding: '5px',
-                                    border: '2px solid #3498db',
-                                    borderRadius: '4px',
-                                }}
-                            />
-                        </div>
-                    </div>
-                    <div>
-                        <strong>Additional Authors:</strong>
-                        {additionalAuthors.map((author: Author, index: number) => (
-                            <div key={index} style={{ marginBottom: '10px' }}>
-                                <input
-                                    type="text"
-                                    value={author.first_name}
-                                    onChange={(e) => handleAuthorChange(index, 'first_name', e.target.value)}
-                                    placeholder="First Name"
-                                    style={{
-                                        marginRight: '10px',
-                                        padding: '5px',
-                                        border: '2px solid #3498db',
-                                        borderRadius: '4px',
-                                    }}
-                                />
-                                <input
-                                    type="text"
-                                    value={author.last_name}
-                                    onChange={(e) => handleAuthorChange(index, 'last_name', e.target.value)}
-                                    placeholder="Last Name"
-                                    style={{
-                                        padding: '5px',
-                                        border: '2px solid #3498db',
-                                        borderRadius: '4px',
-                                    }}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                <button
-                    onClick={handleBack}
-                    style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#3498db',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        marginTop: '20px',
-                    }}
-                >
-                    Back
-                </button>
-            </div>
+        <div>
+        {error && (
+            <p style={{ color: 'red', textAlign: 'center', marginBottom: '10px' }}>
+                {error}
+            </p>
+        )}
+        <PaperForm
+            authorName={retrievedPaper.authorName}
+            setAuthorName={(value) => handleChange('authorName', value)}
+            doi={retrievedPaper.doi}
+            setDoi={(value) => handleChange('doi', value)}
+            title={retrievedPaper.title}
+            setTitle={(value) => handleChange('title', value)}
+            journal={retrievedPaper.journal}
+            setJournal={(value) => handleChange('journal', value)}
+            date={retrievedPaper.date}
+            setDate={(value) => handleChange('date', value)}
+            additionalAuthors={retrievedPaper.additionalAuthors}
+            setAdditionalAuthors={(value) => handleChange('date', value)}
+            onSave={handleSave}
+            onBack={handleBack}
+        />
         </div>
     );
 };
