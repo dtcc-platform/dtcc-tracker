@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { BASE_URL } from "@/app/types/FixedTypes";
 
 export async function DELETE(request: Request, props: { params: Promise<{ doi: string }> }) {
     const params = await props.params;
@@ -6,7 +7,7 @@ export async function DELETE(request: Request, props: { params: Promise<{ doi: s
     console.log(doi)
 
     try {
-        const response = await fetch(`http://127.0.0.1:8000/api/projects/delete/${doi}/`, {
+        const response = await fetch(`${BASE_URL}projects/delete/${doi}/`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -31,7 +32,7 @@ export async function PUT(request: Request, props: { params: Promise<{ doi: stri
 
     try {
         const requestData = await request.json(); // Parse request body
-        const response = await fetch(`http://127.0.0.1:8000/api/projects/update/${doi}/`, {
+        const response = await fetch(`${BASE_URL}projects/update/${doi}/`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",

@@ -1,8 +1,9 @@
 import { error } from 'console';
 import { NextResponse } from 'next/server';
+import { BASE_URL } from '@/app/types/FixedTypes';
 
 export async function GET() {
-  const response = await fetch('http://127.0.0.1:8000/api/papers/');
+  const response = await fetch(`${BASE_URL}papers/`);
   const papers = await response.json();
   return NextResponse.json(papers);
 }
@@ -10,7 +11,7 @@ export async function GET() {
 // Handle POST requests
 export async function POST(request: Request) {
   const body = await request.json();
-  const response = await fetch('http://127.0.0.1:8000/api/papers/', {
+  const response = await fetch(`${BASE_URL}papers/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

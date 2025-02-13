@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-
-const DJANGO_API_URL = 'http://127.0.0.1:8000/api/doi-info/';
+import { BASE_URL } from '@/app/types/FixedTypes';
+const DJANGO_API_URL = `${BASE_URL}doi-info/`;
 
 export async function POST(req: Request) {
     try {
