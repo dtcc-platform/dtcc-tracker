@@ -30,43 +30,18 @@ export default function InfoPage({ paperIndex, projectIndex }: Info) {
         <div style={pageContainerStyle}>
             {selectedProject ? (
                 <div style={formContainerStyle}>
-                    <div style={formBoxStyle}>
-                        <h2>{selectedProject.title || '-'}</h2>
-                        <div style={infoContainerStyle}>
-                            {/* Column 1 */}
-                            <div style={infoColumnStyle}>
-                                <p><strong>Author:</strong> {selectedProject.authorName || '-'}</p>
-                                <p><strong>DOI:</strong> {selectedProject.doi || '-'}</p>
-                                <p><strong>Category:</strong> {selectedProject.category || '-'}</p>
-                                <p><strong>Status:</strong> {selectedProject.status || '-'}</p>
-                                <p><strong>PI:</strong> {selectedProject.pi || '-'}</p>
-                                <p><strong>Funding Body:</strong> {selectedProject.fundingBody || '-'}</p>
-                            </div>
-
-                            {/* Column 2 */}
-                            <div style={infoColumnStyle}>
-                                <p><strong>Funding Program:</strong> {selectedProject.fundingProgram || '-'}</p>
-                                <p><strong>Funding Call:</strong> {selectedProject.fundingCall || '-'}</p>
-                                <p><strong>Topic:</strong> {selectedProject.topic || '-'}</p>
-                                <p><strong>Link:</strong> {selectedProject.link ? (
-                                    <a href={selectedProject.link} target="_blank" rel="noopener noreferrer">{selectedProject.link}</a>
-                                ) : '-'}</p>
-                                <p><strong>Submission Deadline:</strong> {selectedProject.submissionDeadline || '-'}</p>
-                                <p><strong>Amount:</strong> {selectedProject.amount || '-'}</p>
-                            </div>
-
-                            {/* Column 3 */}
-                            <div style={infoColumnStyle}>
-                                <p><strong>Year:</strong> {selectedProject.year || '-'}</p>
-                                <p><strong>Period:</strong> {selectedProject.period || '-'}</p>
-                                <p><strong>Type of Engagement:</strong> {selectedProject.typeOfEngagement || '-'}</p>
-                                <p><strong>Notes:</strong> {selectedProject.notes || '-'}</p>
-                                <p><strong>Documents:</strong> {selectedProject.documents || '-'}</p>
-                                <p><strong>Slug:</strong> {selectedProject.slug || '-'}</p>
-                            </div>
+                <div style={formBoxStyle}>
+                    <h2>{selectedProject.projectName || '-'}</h2>
+                    <div style={infoContainerStyle}>
+                        <div style={infoColumnStyle}>
+                            <p><strong>PI:</strong> {selectedProject.pi || '-'}</p>
+                            <p><strong>Additional Authors:</strong> {selectedProject.additionalAuthors && selectedProject.additionalAuthors.length > 0 ? selectedProject.additionalAuthors.join(', ') : '-'}</p>
+                            <p><strong>Funding Body:</strong> {selectedProject.fundingBody || '-'}</p>
+                            <p><strong>Documents Link:</strong> {selectedProject.documents || '-'}</p>
                         </div>
                     </div>
                 </div>
+            </div>
             ) : selectedPaper ? (
                 <div style={formContainerStyle}>
                     <div style={formBoxStyle}>

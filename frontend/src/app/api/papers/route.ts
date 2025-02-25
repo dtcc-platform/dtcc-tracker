@@ -1,9 +1,17 @@
-import { error } from 'console';
 import { NextResponse } from 'next/server';
 import { BASE_URL } from '@/app/types/FixedTypes';
+import { cookies } from 'next/headers';
 
-export async function GET() {
-  const response = await fetch(`${BASE_URL}papers/`);
+export async function GET(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+  console.log(authHeader)
+  const response = await fetch(`${BASE_URL}papers/`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `${authHeader}`, // Use stored token
+    },
+  });
   const papers = await response.json();
   return NextResponse.json(papers);
 }
@@ -11,9 +19,11 @@ export async function GET() {
 // Handle POST requests
 export async function POST(request: Request) {
   const body = await request.json();
+  const authHeader = request.headers.get("Authorization");
+
   const response = await fetch(`${BASE_URL}papers/`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', "Authorization": `${authHeader}` },
     body: JSON.stringify(body),
   });
 

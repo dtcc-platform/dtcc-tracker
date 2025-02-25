@@ -4,6 +4,7 @@ import { BASE_URL } from "@/app/types/FixedTypes";
 export async function DELETE(request: Request, props: { params: Promise<{ doi: string }> }) {
     const params = await props.params;
     const { doi } = params;
+    const authHeader = request.headers.get("Authorization");
     const encodedDoi = encodeURIComponent(doi);
 
     try {
@@ -11,6 +12,7 @@ export async function DELETE(request: Request, props: { params: Promise<{ doi: s
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
+                "Authorization": `${authHeader}`,
             },
         });
   
@@ -27,6 +29,7 @@ export async function DELETE(request: Request, props: { params: Promise<{ doi: s
 
 export async function PUT(request: Request, props: { params: Promise<{ doi: string }> }) {
     const params = await props.params;
+    const authHeader = request.headers.get("Authorization");
     const { doi } = params;
     console.log(`Updating Paper with DOI: ${doi}`);
 
@@ -36,6 +39,7 @@ export async function PUT(request: Request, props: { params: Promise<{ doi: stri
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
+                "Authorization": `${authHeader}`,
             },
             body: JSON.stringify(requestData),
         });

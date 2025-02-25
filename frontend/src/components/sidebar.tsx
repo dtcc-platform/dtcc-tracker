@@ -37,7 +37,7 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
     if (deleteIndex === null || deleteType === null) return
     try {
       if (deleteType === "projects"){
-        await deleteProject(projects[deleteIndex].doi)
+        await deleteProject(projects[deleteIndex].projectName)
       }
       if (deleteType === "papers"){
         await deletePaper(papers[deleteIndex].doi)
@@ -113,7 +113,7 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
           <div key={index} style={paperItemStyle}>
             <div style={titleContainerStyle}>
               <Link href={`/?projectIndex=${index}`} style={titleStyle}>
-                {project.title}
+                {project.projectName}
               </Link>
               <div style={iconContainerStyle}>
                 <Link href={`/edit-project/${index}`} style={iconButtonStyle}>

@@ -1,37 +1,20 @@
 'use client'
-
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import dtcc_logo from '../../public/dtcc-logo.png';
 import chalmers_logo from '../../public/chalmers-logo.png'
 import Link from "next/link";
 import Sidebar from "./sidebar";
-import { Paper, Project } from "@/app/types/FixedTypes";
-import { fetchProjects } from "@/app/utils/api";
+import newLogo from '../../public/dtcc-logo-new.png'
 import { useRefresh } from "../app/hooks/RefreshContext";
-
+import { useAuth } from "@/app/hooks/AuthContext";
 
 const Header: React.FC = () => {
   const HEADER_HEIGHT = 64; // Height of the header in pixels
   // const [newPapers, setNewPapers] = useState<Paper[]>([]);
-  const {papers, projects} = useRefresh()
-  const { refreshKey } = useRefresh();
-
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       const papersData = await fetchPapers();
-  //       setNewPapers(papersData);
-  //     } catch (error) {
-  //       console.error('Error fetching papers:', error);
-  //     }
-  //   };
-  //   console.log(refreshKey)
-  //   fetchData();
-  // }, [refreshKey]);
-  // console.log(newPapers)
+  const {papers, projects} = useRefresh();
+  const {logout, isAuthenticated} = useAuth();
   return (
-    <div>
+    isAuthenticated &&<div>
     <Sidebar papers={papers} projects={projects}></Sidebar>
     <div
       style={{
@@ -48,10 +31,16 @@ const Header: React.FC = () => {
         {/* Left side: dtcc logo only */}
         <div className="flex items-center">
           <Image
-            src={dtcc_logo}
+            src={newLogo}
             alt="DTCC Logo"
-            className="max-w-[80px] h-auto object-contain"
-          />
+            className="object-contain max-w-[40px]" />
+          {/* Vertical divider with a specific color */}
+          <div className="h-10 w-px bg-[#899BAF] mx-4"></div>
+          {/* Text in two lines */}
+         <div className="flex flex-col text-[#899BAF] leading-tight">
+            <span className="font-bold">Digital Twin</span>
+            <span className="font-bold">Cities Centre</span>
+          </div>
         </div>
 
         {/* Right side: Chalmers logo and Log out button */}
@@ -61,11 +50,12 @@ const Header: React.FC = () => {
             alt="Chalmers Logo"
             className="max-w-[80px] h-auto object-contain"
           />
-          <Link href="/login">
-            <button className="px-2 py-1 font-semibold text-gray-700 bg-white border border-gray-500 rounded-md cursor-pointer hover:bg-gray-100">
+            <button 
+              onClick={logout}
+              className="px-2 py-1 font-semibold text-gray-700 bg-white border border-gray-500 rounded-md cursor-pointer hover:bg-gray-100"
+              >
               Log out
             </button>
-          </Link>
         </div>
       </div>
 
