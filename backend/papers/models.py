@@ -25,6 +25,6 @@ class Paper(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
 
     class Meta: 
-        unique_together = ('user', 'title')
+        unique_together = ('user', 'doi')
     def __str__(self):
-        return self.title
+        return self.doi
