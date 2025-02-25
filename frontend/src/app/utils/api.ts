@@ -4,6 +4,18 @@ const PAPER_API = '/api/papers';
 import { NextResponse } from "next/server";
 import { Paper, Project } from "../types/FixedTypes";
 
+
+const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
+  const token = localStorage.getItem("authToken"); // Or use a secure storage method
+  const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+  };
+
+  return fetch(url, { ...options, headers });
+};
+
 function camelToSnakeCase(obj: any): any {
     if (Array.isArray(obj)) {
       return obj.map(camelToSnakeCase);
@@ -31,7 +43,7 @@ function camelToSnakeCase(obj: any): any {
 // Fetch all papers
 export const fetchProjects = async (): Promise<Project[]> => {
     try {
-      const response = await fetch(`${PROJECTS_API}`);
+      const response = await fetchWithAuth(`${PROJECTS_API}`);
       if (!response.ok) {
         throw new Error('Failed to fetch papers');
       }
@@ -48,21 +60,24 @@ export const fetchProjects = async (): Promise<Project[]> => {
 // Create a new paper
 export const createProject = async (paper: Partial<Project>) => {
   const snakePaper = camelToSnakeCase(paper)  
-  const response = await fetch(PROJECTS_API, {
+  const response = await fetchWithAuth(PROJECTS_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(snakePaper),
   });
+  const data = await response.json();
+
   if (!response.ok) {
-    throw new Error('Failed to create paper');
+    console.log(data.error)
+    return {error: data.error};
   }
-  return response.json();
+  return data;
 };
 
 export const deleteProject = async (projectDoi: string) => {
   try {
     const encodedDoi = encodeURIComponent(projectDoi);
-      const response = await fetch(`/api/projects/${encodedDoi}`, {
+      const response = await fetchWithAuth(`/api/projects/${encodedDoi}`, {
           method: 'DELETE',
           headers: {
               'Content-Type': 'application/json',
@@ -84,7 +99,7 @@ export const deleteProject = async (projectDoi: string) => {
 export const updateProject = async (oldDoi: string, project: Partial<Project>) => {
   const snakeProject = camelToSnakeCase(project)
   const encodedDoi = encodeURIComponent(oldDoi);
-  const response = await fetch(`/api/projects/${encodedDoi}`, {
+  const response = await fetchWithAuth(`/api/projects/${encodedDoi}`, {
       method: "PUT",
       headers: {
           "Content-Type": "application/json",
@@ -95,7 +110,7 @@ export const updateProject = async (oldDoi: string, project: Partial<Project>) =
 
   if (!response.ok) {
     console.error(data.error);
-    throw new Error(data.error || "An error occurred while updating the project");
+    return {error: data.error, status: 500};
   }
 
   return data;
@@ -103,7 +118,7 @@ export const updateProject = async (oldDoi: string, project: Partial<Project>) =
 
 export const fetchPaper = async (): Promise<Paper[]> => {
   try {
-    const response = await fetch(`${PAPER_API}`);
+    const response = await fetchWithAuth(`${PAPER_API}`);
     if (!response.ok) {
       throw new Error('Failed to fetch papers');
     }
@@ -120,7 +135,7 @@ export const fetchPaper = async (): Promise<Paper[]> => {
 // Create a new paper
 export const createPaper = async (paper: Partial<Paper>) => {
   const snakePaper = camelToSnakeCase(paper)  
-  const response = await fetch(PAPER_API, {
+  const response = await fetchWithAuth(PAPER_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(snakePaper),
@@ -138,7 +153,7 @@ export const createPaper = async (paper: Partial<Paper>) => {
 export const deletePaper = async (paperDoi: string) => {
   try {
     const encodedDoi = encodeURIComponent(paperDoi);
-    const response = await fetch(`/api/papers/${encodedDoi}`, {
+    const response = await fetchWithAuth(`/api/papers/${encodedDoi}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
@@ -160,7 +175,7 @@ export const deletePaper = async (paperDoi: string) => {
 export const updatePaper = async (oldDoi: string, paper: Partial<Paper>) => {
   const snakePaper = camelToSnakeCase(paper)
   const encodedDoi = encodeURIComponent(oldDoi);
-  const response = await fetch(`/api/papers/${encodedDoi}`, {
+  const response = await fetchWithAuth(`/api/papers/${encodedDoi}`, {
       method: "PUT",
       headers: {
           "Content-Type": "application/json",
@@ -191,7 +206,7 @@ export interface DoiMetadata {
 
 export const fetchDoiMetadata = async (doi: string): Promise<DoiMetadata | null> => {
   try {
-      const response = await fetch('/api/crossref-retrieve', {
+      const response = await fetchWithAuth('/api/crossref-retrieve', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ doi }),

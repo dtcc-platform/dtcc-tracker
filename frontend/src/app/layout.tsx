@@ -6,6 +6,7 @@ import Sidebar from '@/components/sidebar';
 import Header from '@/components/header';
 import { Paper, Project } from './types/FixedTypes';
 import { RefreshProvider } from '@/app/hooks/RefreshContext';
+import { AuthProvider } from './hooks/AuthContext';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ function getPapers(): Project[] {
 }
 
 export const metadata = {
-  title: 'Paper Submission App',
+  title: 'DTCC Tracker',
   description: 'A Next.js 13+ app for paper submissions.',
 };
 
@@ -31,27 +32,29 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   const HEADER_HEIGHT = 64; // Height of the header in pixels
 
   return (
-    <RefreshProvider>
-    <html lang="en">
-      <body style={{ margin: 0, padding: 0 }}>
-        <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-          {/* Sidebar */}
-          
-            <Header></Header>
-            {/* Page content */}
-            <main
-              style={{
-                paddingTop: `${HEADER_HEIGHT}px`, // Ensure content starts below the header
-                flex: 1,
-                overflow: 'auto',
-              }}
-            >
-              {children}
-            </main>
-        </div>
-      </body>
-    </html>
-    </RefreshProvider>
+    <AuthProvider>
+      <RefreshProvider>
+      <html lang="en">
+        <body style={{ margin: 0, padding: 0 }}>
+          <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+            {/* Sidebar */}
+            
+              <Header></Header>
+              {/* Page content */}
+              <main
+                style={{
+                  paddingTop: `${HEADER_HEIGHT}px`, // Ensure content starts below the header
+                  flex: 1,
+                  overflow: 'auto',
+                }}
+              >
+                {children}
+              </main>
+          </div>
+        </body>
+      </html>
+      </RefreshProvider>
+    </AuthProvider>
   );
 }
 

@@ -6,14 +6,20 @@ interface DropdownProps {
   options: string[]
   value: string
   onChange: (value: string) => void
+  placeholder?: string  // Optional prop for custom placeholder text
 }
 
-const Dropdown: React.FC<DropdownProps> = ({ options, value, onChange }) => {
+const Dropdown: React.FC<DropdownProps> = ({
+  options,
+  value,
+  onChange,
+  placeholder = 'Select an option',  // Default placeholder if none is provided
+}) => {
   return (
     <div style={dropdownStyle}>
       <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
         <option value="" disabled>
-          Select an option
+          {placeholder}
         </option>
         {options.map((option, index) => (
           <option key={index} value={option}>

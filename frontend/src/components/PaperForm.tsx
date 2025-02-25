@@ -102,7 +102,7 @@ const PaperForm: React.FC<PaperFormProps> = ({
                     <label className="block">
                         <strong>Published Date:</strong>
                         <input
-                            type="date"
+                            type="text"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
                             className="w-full p-2 border border-blue-500 rounded mt-1"

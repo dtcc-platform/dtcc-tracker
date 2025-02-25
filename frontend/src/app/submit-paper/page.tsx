@@ -45,6 +45,7 @@ const InputPage: React.FC = () => {
             console.log(response)
             if (response.error) {
                 if (response.error === ("DOI already exists")) {
+                    
                     setError("This DOI already exists."); // Set error message
                 }
             } else {

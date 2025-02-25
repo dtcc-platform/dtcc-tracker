@@ -32,6 +32,7 @@ const ResultPage: React.FC = () => {
         additionalAuthors: parsedAuthors["Additional Authors"]
     })
     console.log(retrievedPaper)
+    console.log(retrievedPaper.date)
     const handleChange = (key: keyof Paper, value: string | string[]) => {
           setRetrievedPaper((prev) => ({ ...prev, [key]: value }))
         }
