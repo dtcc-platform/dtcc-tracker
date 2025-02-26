@@ -1,5 +1,6 @@
 
 export interface Project {
+  id?: number
   projectName: string
   status: string
   pi: string
@@ -8,6 +9,7 @@ export interface Project {
   additionalAuthors: string[]
 }
 export interface Paper{
+  id?: number
   authorName:string
   doi:string
   title:string

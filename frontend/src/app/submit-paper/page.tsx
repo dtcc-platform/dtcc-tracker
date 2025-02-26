@@ -16,7 +16,7 @@ const InputPage: React.FC = () => {
         journal: '',
         date: '',
         title: '',
-        additionalAuthors: []
+        additionalAuthors: [],
     });
     const [additionalAuthors, setAdditionalAuthors] = useState<string[]>([]);
     const { triggerRefresh } = useRefresh();

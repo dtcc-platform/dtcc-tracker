@@ -1,6 +1,7 @@
 'use client'
 
 import { useRefresh } from '../app/hooks/RefreshContext';
+import { useAuth } from '@/app/hooks/AuthContext';
 
 interface Info {
     paperIndex: string;
@@ -9,7 +10,7 @@ interface Info {
 
 export default function InfoPage({ paperIndex, projectIndex }: Info) {
     const { papers, projects } = useRefresh();
-    
+    const {isAuthenticated} = useAuth()
     let selectedProject = null;
     if (projectIndex !== undefined) {
         const idx = parseInt(projectIndex, 10);
@@ -25,9 +26,9 @@ export default function InfoPage({ paperIndex, projectIndex }: Info) {
             selectedPaper = papers[idx];
         }
     }
-
+    console.log(selectedProject, selectedPaper)
     return (
-        <div style={pageContainerStyle}>
+        isAuthenticated &&<div style={pageContainerStyle}>
             {selectedProject ? (
                 <div style={formContainerStyle}>
                 <div style={formBoxStyle}>

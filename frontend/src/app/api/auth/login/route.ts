@@ -17,9 +17,10 @@ export async function POST(req: Request) {
     }
 
     const data = await djangoResponse.json();
+    console.log(data)
     const authToken = data.access_token; // Assuming Django returns a JWT token
     const refreshToken = data.refresh_token; // Assuming Django returns a refresh token
-    return NextResponse.json({ token: authToken, refreshToken:refreshToken, user: data.user }, { status: 200 });
+    return NextResponse.json({ token: authToken, refreshToken:refreshToken, user: data.user.username }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

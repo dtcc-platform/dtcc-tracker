@@ -4,7 +4,6 @@ import { cookies } from 'next/headers';
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("Authorization");
-  console.log(authHeader)
   const response = await fetch(`${BASE_URL}papers/`, {
     method: "GET",
     headers: {
@@ -26,7 +25,7 @@ export async function POST(request: Request) {
     headers: { 'Content-Type': 'application/json', "Authorization": `${authHeader}` },
     body: JSON.stringify(body),
   });
-
+  console.log(JSON.stringify(body))
   if (!response.ok) {
     const errorData = await response.json();
       if (response.status === 400 && errorData.error === "Duplicate key error") {

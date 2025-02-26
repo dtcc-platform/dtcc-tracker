@@ -46,8 +46,14 @@ class PaperListCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        """Fetch all papers belonging to the authenticated user."""
-        papers = Paper.objects.filter(user=request.user)
+        """
+        If superuser, fetch all projects;
+        otherwise fetch only projects belonging to this user.
+        """
+        if request.user.is_superuser:
+            papers = Paper.objects.all()
+        else:
+            papers = Paper.objects.filter(user=request.user)
         serializer = PaperSerializer(papers, many=True)
         return Response(serializer.data)
 
@@ -63,33 +69,40 @@ class PaperListCreateView(APIView):
                     {"error": "Duplicate DOI error", "field": "doi"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        errors = serializer.errors.copy()
+        if 'non_field_errors' in errors:
+            errors['error'] = 'Duplicate key error'  # use the first error message
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PaperDeleteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def delete(self, request, doi):
-        """Delete a paper only if it belongs to the authenticated user."""
-        decoded_doi = unquote(doi)
-        paper = get_object_or_404(Paper, doi=decoded_doi, user=request.user)
+    def delete(self, request, pk):
+        if request.user.is_superuser:
+            paper = get_object_or_404(Paper, pk=pk)
+        else:
+            paper = get_object_or_404(Paper, pk=pk, user=request.user)
+
         paper.delete()
         return JsonResponse({"message": "Paper deleted successfully"}, status=200)
 
 class PaperUpdateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def put(self, request, doi):
-        """Update a paper, ensuring the user owns it and preventing duplicate DOIs."""
-        paper = get_object_or_404(Paper, doi=doi, user=request.user)
-        new_doi = request.data.get("doi")
+    def put(self, request, pk):
+        if request.user.is_superuser:
+            paper = get_object_or_404(Paper, pk=pk)
+        else:
+            paper = get_object_or_404(Paper, pk=pk, user=request.user)
 
-        # Prevent duplicate DOIs
-        if new_doi and new_doi != doi:
-            if Paper.objects.filter(doi=new_doi, user=request.user).exists():
-                return Response(
-                    {"error": "DOI already exists"}, status=status.HTTP_400_BAD_REQUEST
-                )
-            paper.doi = new_doi  # Assign the new DOI manually
+        # If the user wants to rename the project:
+        new_doi = request.data.get("doi")
+        if new_doi and new_doi != paper.doi:
+            # Still ensure not to conflict with that same user's other projects.
+            # If you want it to be globally unique, remove "user=project.user."
+            if Paper.objects.filter(doi=new_doi, user=paper.user).exists():
+                return Response({"error": "Project already exists"}, status=status.HTTP_400_BAD_REQUEST)
+            paper.doi = new_doi
 
         serializer = PaperSerializer(paper, data=request.data, partial=True)
         if serializer.is_valid():
@@ -98,19 +111,24 @@ class PaperUpdateView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 class ProjectListCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        """Fetch all projects belonging to the authenticated user."""
-        projects = Project.objects.filter(user=request.user)
+        """
+        If superuser, fetch all projects;
+        otherwise fetch only projects belonging to this user.
+        """
+        if request.user.is_superuser:
+            projects = Project.objects.all()
+        else:
+            projects = Project.objects.filter(user=request.user)
         serializer = ProjectSerializer(projects, many=True)
         return Response(serializer.data)
 
     def post(self, request):
         """Create a new project and associate it with the authenticated user."""
-        print(f"Authenticated User: {request.user}")  # Debugging step
-        print(f"Request Data: {request.data}")  # Debugging step
 
         serializer = ProjectSerializer(data=request.data, context={'request': request})  # Pass request context
 
@@ -118,40 +136,57 @@ class ProjectListCreateView(APIView):
             serializer.save()  # No need to manually pass user
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         
-        print(f"Serializer Errors: {serializer.errors}")  # Debugging step
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        errors = serializer.errors.copy()
+        if 'non_field_errors' in errors:
+            errors['error'] = 'Duplicate key error'  # use the first error message
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
 class ProjectDeleteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def delete(self, request, project_name):
-        """Delete a project only if it belongs to the authenticated user."""
-        project = get_object_or_404(Project, project_name=project_name, user=request.user)
+    def delete(self, request, pk):
+        """
+        If the user is a superuser, allow deleting any project.
+        Otherwise, ensure the project belongs to the request user.
+        """
+        if request.user.is_superuser:
+            # Superuser can delete any project
+            project = get_object_or_404(Project, pk=pk)
+        else:
+            # Regular user can only delete their own project
+            project = get_object_or_404(Project, pk=pk, user=request.user)
+
         project.delete()
         return JsonResponse({"message": "Project deleted successfully"}, status=200)
 
 class ProjectUpdateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def put(self, request, project_name):
-        """Update a project, ensuring the user owns it and preventing duplicate names."""
-        project = get_object_or_404(Project, project_name=project_name, user=request.user)
-        new_name = request.data.get("project_name")
+    def put(self, request, pk):
+        if request.user.is_superuser:
+            project = get_object_or_404(Project, pk=pk)
+        else:
+            project = get_object_or_404(Project, pk=pk, user=request.user)
 
-        # Prevent duplicate project names
-        if new_name and new_name != project_name:
-            if Project.objects.filter(project_name=new_name, user=request.user).exists():
+        # If the user wants to rename the project:
+        new_name = request.data.get("project_name")
+        if new_name and new_name != project.project_name:
+            # Still ensure not to conflict with that same user's other projects.
+            # If you want it to be globally unique, remove "user=project.user."
+            if Project.objects.filter(project_name=new_name, user=project.user).exists():
                 return Response({"error": "Project already exists"}, status=status.HTTP_400_BAD_REQUEST)
-            project.project_name = new_name  # Manually update project name
+            project.project_name = new_name
 
         serializer = ProjectSerializer(project, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
-        
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 def fetch_doi_metadata(doi):
     """Fetch metadata for a given DOI from Crossref API."""
