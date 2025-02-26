@@ -74,7 +74,7 @@ export const createProject = async (paper: Partial<Project>) => {
   return data;
 };
 
-export const deleteProject = async (projectDoi: string) => {
+export const deleteProject = async (projectDoi: number) => {
   try {
     const encodedDoi = encodeURIComponent(projectDoi);
       const response = await fetchWithAuth(`/api/projects/${encodedDoi}`, {
@@ -96,10 +96,9 @@ export const deleteProject = async (projectDoi: string) => {
   }
 };
 
-export const updateProject = async (oldDoi: string, project: Partial<Project>) => {
+export const updateProject = async (id: number, project: Partial<Project>) => {
   const snakeProject = camelToSnakeCase(project)
-  const encodedDoi = encodeURIComponent(oldDoi);
-  const response = await fetchWithAuth(`/api/projects/${encodedDoi}`, {
+  const response = await fetchWithAuth(`/api/projects/${id}`, {
       method: "PUT",
       headers: {
           "Content-Type": "application/json",
@@ -150,10 +149,9 @@ export const createPaper = async (paper: Partial<Paper>) => {
   return data;
 };
 
-export const deletePaper = async (paperDoi: string) => {
+export const deletePaper = async (paperDoi: number) => {
   try {
-    const encodedDoi = encodeURIComponent(paperDoi);
-    const response = await fetchWithAuth(`/api/papers/${encodedDoi}`, {
+    const response = await fetchWithAuth(`/api/papers/${paperDoi}`, {
         method: 'DELETE',
         headers: {
             'Content-Type': 'application/json',
@@ -172,10 +170,9 @@ export const deletePaper = async (paperDoi: string) => {
   }
 };
 
-export const updatePaper = async (oldDoi: string, paper: Partial<Paper>) => {
+export const updatePaper = async (id: number, paper: Partial<Paper>) => {
   const snakePaper = camelToSnakeCase(paper)
-  const encodedDoi = encodeURIComponent(oldDoi);
-  const response = await fetchWithAuth(`/api/papers/${encodedDoi}`, {
+  const response = await fetchWithAuth(`/api/papers/${id}`, {
       method: "PUT",
       headers: {
           "Content-Type": "application/json",

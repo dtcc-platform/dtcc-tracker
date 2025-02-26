@@ -34,7 +34,7 @@ export default function EditProjectClient({ paperIndex}: EditProjectClientProps)
 
   const handleSave = async () => {
           try {
-              const response = await updateProject(project.projectName, newProject);
+              const response = await updateProject(project.id!, newProject);
               console.log(response)
               if (response.error) {
                   if (response.error === ("Project already exists")) {

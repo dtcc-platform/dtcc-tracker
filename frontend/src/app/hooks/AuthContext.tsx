@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 // Define authentication context type
 interface AuthContextType {
-  user: any;
+  user: string;
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;

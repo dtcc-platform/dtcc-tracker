@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Paper, Project } from '@/app/types/FixedTypes'
 import { deleteProject, deletePaper } from '@/app/utils/api'
 import { useRefresh } from '../app/hooks/RefreshContext'
+import { useAuth } from '@/app/hooks/AuthContext'
 
 interface SidebarProps {
   papers: Paper[]
@@ -20,7 +21,7 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
   const toggleSection = (section: 'papers' | 'projects') => {
     setExpandedSection(expandedSection === section ? null : section)
   }
-
+  const {user} = useAuth()
   const openConfirmation = (index: number, type: 'papers' | 'projects') => {
     setDeleteIndex(index)
     setDeleteType(type)
@@ -37,10 +38,10 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
     if (deleteIndex === null || deleteType === null) return
     try {
       if (deleteType === "projects"){
-        await deleteProject(projects[deleteIndex].projectName)
+        await deleteProject(projects[deleteIndex].id!)
       }
       if (deleteType === "papers"){
-        await deletePaper(papers[deleteIndex].doi)
+        await deletePaper(papers[deleteIndex].id!)
       }
 
       closeConfirmation()
@@ -52,7 +53,7 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
 
   return (
     <div style={sidebarContainerStyle}>
-      <div style={{ height: '64px' }}></div>  
+      <div style={{ height: '64px' }}>{user}</div>  
 
       <nav style={navStyle}>
         <Link href="/submit-paper">

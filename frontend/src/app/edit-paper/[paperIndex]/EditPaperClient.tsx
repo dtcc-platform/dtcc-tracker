@@ -21,8 +21,8 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
     title: paper.title|| '-',
     journal: paper.journal,
     date: paper.date,
-    additionalAuthors: paper.additionalAuthors
-    
+    additionalAuthors: paper.additionalAuthors,
+    id: paper.id
   })
 
   const handleChange = (key: keyof Paper, value: string| string[]) => {
@@ -34,7 +34,7 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
     setMessage('')
   
     try {
-      await updatePaper(paper.doi, newPaper)
+      await updatePaper(paper.id!, newPaper)
       triggerRefresh()
       router.push('/?paperIndex=' + paperIndex)
     } catch (error: any) {
