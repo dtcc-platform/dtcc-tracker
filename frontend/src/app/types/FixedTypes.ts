@@ -7,6 +7,7 @@ export interface Project {
   fundingBody: string
   documents: string
   additionalAuthors: string[]
+  submittedBy? : string
 }
 export interface Paper{
   id?: number
@@ -16,5 +17,6 @@ export interface Paper{
   journal:string
   date:string
   additionalAuthors: string[]
+  submittedBy? : string
 }
 export const BASE_URL = `${process.env.REACT_APP_API_BASE_URL}/api/`

@@ -7,12 +7,15 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import IntegrityError
 from .models import Paper, Project
-from .serializers import PaperSerializer, ProjectSerializer
+from .serializers import PaperSerializer, ProjectSerializer, CustomTokenVerifySerializer
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.views import TokenVerifyView
 
+class CustomTokenVerifyView(TokenVerifyView):
+    serializer_class = CustomTokenVerifySerializer
 
 @csrf_exempt  # Disable CSRF for API requests (use CORS instead for security)
 def login_view(request):
@@ -32,6 +35,7 @@ def login_view(request):
                         "id": user.id,
                         "username": user.username,
                         "email": user.email,
+                        "is_superuser": user.is_superuser
                     }
                 }, status=200)
             else:

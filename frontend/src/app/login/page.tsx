@@ -5,7 +5,7 @@ import { useAuth } from "../hooks/AuthContext";
 import { useRouter } from "next/navigation";
 import styles from "./Login.module.css";
 import Image from "next/image";
-import logo from "../../../public/dtcc-logo.png";
+import newLogo from "../../../public/dtcc-logo-new.png";
 import {useRefresh} from "../hooks/RefreshContext";
 
 const LoginPage: React.FC = () => {
@@ -32,9 +32,22 @@ const LoginPage: React.FC = () => {
   return (
     <div className={styles.container}>
       <div>
-        <Image src={logo} alt="DTCC Logo" width={500} />
+        <div className="flex items-center">
+          <Image
+            src={newLogo}
+            alt="DTCC Logo"
+            className="object-contain max-w-[100px]"  // increased from 40px to 80px
+          />
+          {/* Vertical divider with a specific color */}
+          <div className="h-10 w-px bg-[#899BAF] mx-4"></div>
+          {/* Text in two lines with larger font size */}
+          <div className="flex flex-col text-[#899BAF] leading-tight">
+            <span className="font-bold text-2xl">Digital Twin</span>
+            <span className="font-bold text-2xl">Cities Centre</span>
+          </div>
+        </div>
       </div>
-      <form onSubmit={handleSubmit} className={styles.form}>
+      <form onSubmit={handleSubmit} className={styles.form} style={{marginTop: "20px"}}>
         <input
           type="text"
           placeholder="Username"
@@ -49,12 +62,13 @@ const LoginPage: React.FC = () => {
           onChange={(e) => setPassword(e.target.value)}
           className={styles.input}
         />
-        {error && <p className={styles.error}>{error}</p>} {/* Show error message if login fails */}
+        {error && <p className={styles.error}>{error}</p>}
         <button type="submit" className={styles.button}>
           Log in
         </button>
       </form>
     </div>
+
   );
 };
 
