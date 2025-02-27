@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 interface AuthContextType {
   user: string;
   isAuthenticated: boolean;
+  isSuperUser: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isSuperUser, setIsSuperUser] = useState(false);
   const router = useRouter();
 
   // Check authentication status on mount
@@ -39,11 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         if (response.ok) {
           const data = await response.json();
-          setUser(data.user);
+          console.log('data check auth'  ,)
+          setUser(data.username);
+          setIsSuperUser(data.is_superuser);
           setIsAuthenticated(true);
         } else {
           setUser(null);
           setIsAuthenticated(false);
+          router.push("/login");
         }
       } catch (error) {
         console.error("Auth check failed:", error);
@@ -68,9 +73,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const data = await response.json();
       localStorage.setItem("authToken", data.token); // Store token in localStorage
-      localStorage.setItem("refreshToken", data.refreshToken); // Store refresh token in localStorage
+      localStorage.setItem("refreshToken", data.refreshToken);// Store refresh token in localStorage
+      setIsSuperUser(data.is_superuser);
       setUser(data.user);
       setIsAuthenticated(true);
+      console.log('data check login'  ,data)
       return true
     } catch (error) {
       console.error("Login error:", error);
@@ -93,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isSuperUser, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

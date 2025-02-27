@@ -21,13 +21,13 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
   const toggleSection = (section: 'papers' | 'projects') => {
     setExpandedSection(expandedSection === section ? null : section)
   }
-  const {user} = useAuth()
+  const {user, isSuperUser} = useAuth()
   const openConfirmation = (index: number, type: 'papers' | 'projects') => {
     setDeleteIndex(index)
     setDeleteType(type)
     setShowConfirm(true)
   }
-
+  console.log('super user check',isSuperUser)
   const closeConfirmation = () => {
     setShowConfirm(false)
     setDeleteIndex(null)
@@ -78,7 +78,10 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
                 <div key={index} style={paperItemStyle}>
             <div style={titleContainerStyle}>
               <Link href={`/?paperIndex=${index}`} style={titleStyle}>
-                {paper.title}
+              {isSuperUser && paper.submittedBy
+                ? `${paper.submittedBy}/${paper.title}`
+                : paper.title
+              }
               </Link>
               <div style={iconContainerStyle}>
                 <Link href={`/edit-paper/${index}`} style={iconButtonStyle}>
@@ -114,7 +117,10 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
           <div key={index} style={paperItemStyle}>
             <div style={titleContainerStyle}>
               <Link href={`/?projectIndex=${index}`} style={titleStyle}>
-                {project.projectName}
+              {isSuperUser && project.submittedBy
+                ? `${project.submittedBy}/${project.projectName}`
+                : project.projectName
+              }
               </Link>
               <div style={iconContainerStyle}>
                 <Link href={`/edit-project/${index}`} style={iconButtonStyle}>

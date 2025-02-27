@@ -18,9 +18,9 @@ export async function POST(req: NextRequest) {
         });
 
         const data = await djangoResponse.json();
-
+        console.log(data)
         if (djangoResponse.ok) {
-            return NextResponse.json({ valid: true, message: "Token is valid", data }, { status: 200 });
+            return NextResponse.json({ is_superuser: data.is_superuser, username: data.username, valid: true, message: "Token is valid" }, { status: 200 });
         } else {
             return NextResponse.json({ valid: false, message: "Invalid or expired token", error: data }, { status: 401 });
         }

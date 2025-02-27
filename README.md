@@ -5,7 +5,7 @@ This repository contains both the frontend and backend services for the project.
 ## Project Structure
 
 ```
-monorepo/
+dtcc-tracker/
 │── frontend/    # Frontend application (React/Next.js)
 │── backend/     # Backend application (Django)
 │── README.md    # Project documentation
@@ -49,6 +49,7 @@ pip install -r requirements.txt
 cd backend
 source venv/bin/activate  # (If not activated)
 python manage.py migrate
+python manage.py createsuperuser # Creating initial superuser
 python manage.py runserver
 ```
 
@@ -72,13 +73,8 @@ By default, the frontend runs on `http://localhost:3000/`.
 
 ```bash
 cd backend
+python manage.py makemigrations
 python manage.py migrate
 ```
 
-### Creating a Superuser
-
-```bash
-cd backend
-python manage.py createsuperuser
-```
 
