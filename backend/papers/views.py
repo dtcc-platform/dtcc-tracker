@@ -7,16 +7,78 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import IntegrityError
 from .models import Paper, Project
-from .serializers import PaperSerializer, ProjectSerializer, CustomTokenVerifySerializer
+from .serializers import PaperSerializer, ProjectSerializer, CustomTokenVerifySerializer, UserSerializer
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenVerifyView
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.core.mail import send_mail
+from django.conf import settings
+from rest_framework.permissions import IsAdminUser
 
 class CustomTokenVerifyView(TokenVerifyView):
     serializer_class = CustomTokenVerifySerializer
 
+
+@csrf_exempt
+def forgot_password(request):
+    """
+    POST: { "email": "user@example.com" }
+    """
+    if request.method == "POST":
+        email = request.POST.get("email") or request.GET.get("email") or ""
+
+        # 1. Find the user by email
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            # If user not found, return generic success or error as you prefer
+            return JsonResponse({
+                "success": True, 
+                "message": "If the email is valid, a reset link has been sent."
+            })
+
+        # 2. Generate a password reset token
+        token = default_token_generator.make_token(user)
+
+        # 3. Encode the user’s primary key (id) in base 64
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        # 4. Construct the reset URL
+        #    This should match whatever route your front-end or Django app 
+        #    handles to actually reset the password.
+        #    Example: "https://yourfrontend.com/reset/<uid>/<token>"
+        reset_link = f"https://yourfrontend.com/reset/{uid}/{token}"
+
+        # 5. Build an email message that includes the username and the reset link
+        subject = "Password Reset Request"
+        message = (
+            f"Hi {user.username},\n\n"
+            "You requested a password reset.\n\n"
+            f"Use the link below to reset your password:\n{reset_link}\n\n"
+            "If you did not request this, please ignore this email.\n"
+        )
+
+        # 6. Send the email
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [user.email],
+            fail_silently=False,
+        )
+
+        return JsonResponse({
+            "success": True, 
+            "message": "If the email is valid, a reset link has been sent."
+        })
+
+    return JsonResponse({"error": "Method not allowed."}, status=405)
 @csrf_exempt  # Disable CSRF for API requests (use CORS instead for security)
 def login_view(request):
     if request.method == "POST":
@@ -253,3 +315,49 @@ class DOIInfoView(APIView):
             return Response(metadata, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(metadata, status=status.HTTP_200_OK)
+    
+
+class UserListCreateAPIView(APIView):
+    permission_classes = [IsAdminUser]  # Only admin/superuser can access
+
+    def get(self, request):
+        """List all users."""
+        users = User.objects.all()
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        """Create a new user."""
+        serializer = UserSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()  # will call create() in serializer, hashing password
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserDetailAPIView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get_object(self, pk):
+        return User.objects.get(pk=pk)
+
+    def get(self, request, pk):
+        """Retrieve a specific user."""
+        user = self.get_object(pk)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+    def patch(self, request, pk):
+        """Partial update of a user."""
+        user = self.get_object(pk)
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()  # will call update() in serializer, hashing password if provided
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        """Delete a user."""
+        user = self.get_object(pk)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

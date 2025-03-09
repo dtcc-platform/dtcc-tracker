@@ -60,5 +60,33 @@ class CustomTokenVerifySerializer(TokenVerifySerializer):
         data["username"] = user.username
         return data
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        # You can customize which fields to expose
+        fields = [
+            'id', 'username', 'email', 'is_superuser', 'is_staff', 
+            'password'
+        ]
+        # Make 'id' read-only and possibly exclude 'password' from being read back
+        read_only_fields = ['id']
+
+    # By default, if you want to handle password creation or updating properly,
+    # you need to override how password is set so it’s hashed:
+    def create(self, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().create(validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+        return user
 
 

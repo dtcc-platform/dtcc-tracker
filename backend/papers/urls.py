@@ -6,6 +6,7 @@ urlpatterns = [
     path("auth/login/", login_view, name="login"),
     path("auth/token/verify/", CustomTokenVerifyView.as_view(), name="token_verify"),
     path("auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path('forgot_password/', forgot_password, name='forgot_password'),
 
     path('papers/', PaperListCreateView.as_view(), name='paper-list-create'),
     path('papers/delete/<int:pk>/', PaperDeleteView.as_view(), name='paper-delete'),
@@ -16,4 +17,7 @@ urlpatterns = [
     path('projects/update/<int:pk>/', ProjectUpdateView.as_view(), name='project-update'),  # PUT Route
 
     path('doi-info/', DOIInfoView.as_view(), name='doi-info'),
+
+    path('users/', UserListCreateAPIView.as_view(), name='user-list-create'),
+    path('users/<int:pk>/', UserDetailAPIView.as_view(), name='user-detail'),
 ]

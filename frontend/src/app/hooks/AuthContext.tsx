@@ -1,9 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
-// Define authentication context type
 interface AuthContextType {
   user: string;
   isAuthenticated: boolean;
@@ -12,36 +11,45 @@ interface AuthContextType {
   logout: () => void;
 }
 
-// Create authentication context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// AuthProvider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSuperUser, setIsSuperUser] = useState(false);
-  const router = useRouter();
 
-  // Check authentication status on mount
+  const router = useRouter();
+  const pathname = usePathname(); // <-- new
+
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        // Define any public (unprotected) routes here
+        const publicRoutes = ["/login", "/forgot-password", "/reset", "/some-other-public-route"];
+
+        // If the user is visiting a public route, skip auth checks
+        if (publicRoutes.includes(pathname)) {
+          return;
+        }
+
         const token = localStorage.getItem("authToken");
         if (!token) {
+          // Not logged in, redirect to login if they are on a protected route
           setUser(null);
           setIsAuthenticated(false);
           router.push("/login");
           return;
         }
+
+        // Otherwise, verify token with the backend
         const response = await fetch("/api/auth/status", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token }),
-            credentials: "include",
-          });
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+          credentials: "include",
+        });
         if (response.ok) {
           const data = await response.json();
-          console.log('data check auth'  ,)
           setUser(data.username);
           setIsSuperUser(data.is_superuser);
           setIsAuthenticated(true);
@@ -55,9 +63,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
     checkAuth();
-  }, []);
+  }, [pathname, router]);
 
-  // Login function
   const login = async (username: string, password: string) => {
     try {
       const response = await fetch("/api/auth/login", {
@@ -68,24 +75,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!response.ok) {
-        return false // Explicitly throw an error
+        return false;
       }
 
       const data = await response.json();
-      localStorage.setItem("authToken", data.token); // Store token in localStorage
-      localStorage.setItem("refreshToken", data.refreshToken);// Store refresh token in localStorage
+      localStorage.setItem("authToken", data.token);
+      localStorage.setItem("refreshToken", data.refreshToken);
       setIsSuperUser(data.is_superuser);
       setUser(data.user);
       setIsAuthenticated(true);
-      console.log('data check login'  ,data)
-      return true
+      return true;
     } catch (error) {
       console.error("Login error:", error);
-      return false
+      return false;
     }
   };
 
-  // Logout function
   const logout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
@@ -93,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(false);
       localStorage.removeItem("authToken");
       localStorage.removeItem("refreshToken");
-      router.push("/login"); // Redirect to login after logout
+      router.push("/login");
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -106,7 +111,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// Custom hook for using authentication context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

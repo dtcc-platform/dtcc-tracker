@@ -3,7 +3,7 @@ const PAPER_API = '/api/papers';
 
 import { NextResponse } from "next/server";
 import { Paper, Project } from "../types/FixedTypes";
-
+import {User} from "../types/FixedTypes"
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("authToken"); // Or use a secure storage method
@@ -220,3 +220,63 @@ export const fetchDoiMetadata = async (doi: string): Promise<DoiMetadata | null>
       return null;
   }
 };
+
+
+export async function fetchUsers(): Promise<User[]> {
+  const response = await fetchWithAuth("/api/users", { method: "GET" });
+  if (!response.ok) {
+    throw new Error("Failed to fetch users");
+  }
+  return response.json();
+}
+
+/**
+ * Create a new user
+ */
+export async function createUser(userData: Partial<User> & { password: string }): Promise<User> {
+  const response = await fetchWithAuth("/api/users", {
+    method: "POST",
+    body: JSON.stringify(userData),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create user");
+  }
+  return response.json();
+}
+
+/**
+ * Retrieve a single user
+ */
+export async function getUser(userId: number): Promise<User> {
+  const response = await fetchWithAuth(`/api/users/${userId}`, { method: "GET" });
+  if (!response.ok) {
+    throw new Error("Failed to fetch user");
+  }
+  return response.json();
+}
+
+/**
+ * Update a user (partial update)
+ */
+export async function updateUser(userId: number, userData: Partial<User>): Promise<User> {
+  const response = await fetchWithAuth(`/api/users/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(userData),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to update user");
+  }
+  return response.json();
+}
+
+/**
+ * Delete a user
+ */
+export async function deleteUser(userId: number): Promise<void> {
+  const response = await fetchWithAuth(`/api/users/${userId}`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error("Failed to delete user");
+  }
+  // No JSON body to parse for a 204
+}

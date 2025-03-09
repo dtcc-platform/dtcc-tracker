@@ -47,3 +47,9 @@
     color: #d8000c;
     margin-top: 10px;
 }
+/* Login.module.css */
+.forgotPasswordLink {
+    margin-top: 1rem;
+    text-align: right;
+    /* any additional styling here */
+  }

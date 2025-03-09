@@ -67,6 +67,9 @@ const LoginPage: React.FC = () => {
           Log in
         </button>
       </form>
+      <div className={styles.forgotPasswordLink}>
+      <a href="/forgot-password">Forgot Password?</a>
+    </div>
     </div>
 
   );

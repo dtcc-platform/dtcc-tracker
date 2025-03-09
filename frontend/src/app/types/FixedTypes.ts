@@ -19,4 +19,13 @@ export interface Paper{
   additionalAuthors: string[]
   submittedBy? : string
 }
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  is_superuser: boolean;
+  // add other fields if needed
+}
+
+
 export const BASE_URL = `${process.env.REACT_APP_API_BASE_URL}/api/`
