@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, FormEvent } from "react";
-import { useRouter } from "next/navigation"; 
-// If you are still on Next.js 12 (pages router), you'd use 'next/router' instead
-import { User } from "../types/FixedTypes";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../hooks/AuthContext";
 import {
   fetchUsers,
@@ -11,29 +9,41 @@ import {
   deleteUser,
   updateUser,
 } from "../utils/api";
+import { User } from "../types/FixedTypes";
 
 export default function AdminUsersPage() {
   const { isAuthenticated, isSuperUser } = useAuth();
   const router = useRouter();
 
+  // State: list of users
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Form state for creating a new user
+  // State: new user form
   const [newUser, setNewUser] = useState({
     username: "",
     email: "",
     password: "",
+    firstName: "",  // Example additional field
+    lastName: "",   // Example additional field
   });
 
-  // State to track which user we're editing (if any)
-  // We'll allow partial updates. The user data from Django typically won't expose a password,
-  // but we can optionally supply one if we want to reset it.
+  // State: editing existing user
   const [editUser, setEditUser] = useState<User & { password?: string } | null>(null);
 
-  // On mount, fetch the existing users (only if user is authenticated + superuser)
+  // State: confirmation modal for delete
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
+  // Load users on mount
   useEffect(() => {
-    // Otherwise, load user list
+    if (!isAuthenticated) {
+      return;
+    }
+    if (!isSuperUser) {
+      router.push("/");
+      return;
+    }
+
     (async () => {
       try {
         const data = await fetchUsers();
@@ -46,33 +56,48 @@ export default function AdminUsersPage() {
     })();
   }, [isAuthenticated, isSuperUser, router]);
 
-  // CREATE a new user
+  // CREATE user
   async function handleCreateUser(e: FormEvent) {
     e.preventDefault();
     try {
-      const created = await createUser(newUser);
+      // Build the payload that your backend expects
+      const payload = {
+        username: newUser.username,
+        email: newUser.email,
+        password: newUser.password,
+        // If your Django model has first_name, last_name, you can pass them
+        // (Remember to handle them in your serializer, though!)
+        first_name: newUser.firstName,
+        last_name: newUser.lastName,
+      };
+
+      const created = await createUser(payload);
       setUsers((prev) => [...prev, created]);
-      // Reset form
-      setNewUser({ username: "", email: "", password: "" });
+
+      // Clear the form
+      setNewUser({
+        username: "",
+        email: "",
+        password: "",
+        firstName: "",
+        lastName: "",
+      });
     } catch (error) {
       console.error("Error creating user:", error);
     }
   }
 
-  // UPDATE (partial) an existing user
+  // UPDATE user
   async function handleUpdateUser() {
     if (!editUser) return;
     const userId = editUser.id;
 
-    // Build partial data from editUser (only the fields we want to send)
-    // For instance, if password is empty, we might exclude it
-    const { username, email, password } = editUser;
-    const payload: Partial<{ username: string; email: string; password: string }> = {
-      username,
-      email,
+    const payload: Record<string, string> = {
+      username: editUser.username,
+      email: editUser.email,
     };
-    if (password) {
-      payload.password = password;
+    if (editUser.password) {
+      payload.password = editUser.password;
     }
 
     try {
@@ -84,13 +109,21 @@ export default function AdminUsersPage() {
     }
   }
 
-  // DELETE a user
-  async function handleDeleteUser(userId: number) {
+  // Initiate delete (show confirmation modal)
+  function confirmDeleteUser(user: User) {
+    setUserToDelete(user);
+  }
+
+  // Actually delete user (after user confirms)
+  async function handleConfirmDelete() {
+    if (!userToDelete) return;
     try {
-      await deleteUser(userId);
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
+      await deleteUser(userToDelete.id);
+      setUsers((prev) => prev.filter((u) => u.id !== userToDelete.id));
     } catch (error) {
       console.error("Error deleting user:", error);
+    } finally {
+      setUserToDelete(null); // Hide modal
     }
   }
 
@@ -99,50 +132,99 @@ export default function AdminUsersPage() {
   }
 
   if (!isSuperUser) {
-    // Additional check if needed
     return <p>You are not authorized to view this page.</p>;
   }
 
   return (
-    <div style={{ padding: "1rem" }}>
+    <div style={{ padding: "1rem", fontFamily: "sans-serif" }}>
       <h1>Admin: User Management</h1>
 
       {/* CREATE NEW USER FORM */}
-      <section style={{ marginBottom: "2rem" }}>
-        <h2>Create a New User</h2>
-        <form onSubmit={handleCreateUser}>
-          <div>
-            <label htmlFor="username">Username:</label>
-            <input
-              id="username"
-              type="text"
-              value={newUser.username}
-              onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-            />
-          </div>
+      <section
+        style={{
+          marginBottom: "2rem",
+          border: "1px solid #ccc",
+          padding: "1rem",
+          borderRadius: "6px",
+          maxWidth: "400px",
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>Create a New User</h2>
+        <form
+  onSubmit={handleCreateUser}
+  style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}
+>
+  <div>
+    <label htmlFor="username" style={{ display: "block", marginBottom: "0.2rem" }}>
+      Username:
+    </label>
+    <input
+      id="username"
+      type="text"
+      value={newUser.username}
+      onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+      style={{
+        width: "100%",
+        padding: "0.5rem",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+      }}
+      required
+    />
+  </div>
 
-          <div>
-            <label htmlFor="email">Email:</label>
-            <input
-              id="email"
-              type="email"
-              value={newUser.email}
-              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-            />
-          </div>
+  {/* <div>
+    <label htmlFor="email" style={{ display: "block", marginBottom: "0.2rem" }}>
+      Email (optional):
+    </label>
+    <input
+      id="email"
+      type="email"
+      value={newUser.email}
+      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+      style={{
+        width: "100%",
+        padding: "0.5rem",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+      }}
+    />
+  </div> */}
 
-          <div>
-            <label htmlFor="password">Password:</label>
-            <input
-              id="password"
-              type="password"
-              value={newUser.password}
-              onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-            />
-          </div>
+  <div>
+    <label htmlFor="password" style={{ display: "block", marginBottom: "0.2rem" }}>
+      Password:
+    </label>
+    <input
+      id="password"
+      type="password"
+      value={newUser.password}
+      onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+      style={{
+        width: "100%",
+        padding: "0.5rem",
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+      }}
+      required
+    />
+  </div>
 
-          <button type="submit">Create User</button>
-        </form>
+  <button
+    type="submit"
+    style={{
+      backgroundColor: "#0070f3",
+      color: "#fff",
+      padding: "0.5rem 1rem",
+      border: "none",
+      borderRadius: "4px",
+      cursor: "pointer",
+      marginTop: "0.5rem",
+    }}
+  >
+    Create User
+  </button>
+</form>
       </section>
 
       {/* USER LIST */}
@@ -150,21 +232,27 @@ export default function AdminUsersPage() {
         <h2>Existing Users</h2>
         {users.length === 0 && <p>No users found.</p>}
         {users.length > 0 && (
-          <table border={1} cellPadding={8} cellSpacing={0}>
+          <table
+            style={{
+              borderCollapse: "collapse",
+              width: "100%",
+              maxWidth: "800px",
+            }}
+          >
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Username</th>
-                <th>Email</th>
-                <th>Superuser?</th>
-                <th>Actions</th>
+                <th style={tableHeaderStyle}>ID</th>
+                <th style={tableHeaderStyle}>Username</th>
+                <th style={tableHeaderStyle}>Email</th>
+                <th style={tableHeaderStyle}>Superuser?</th>
+                <th style={tableHeaderStyle}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr key={u.id}>
-                  <td>{u.id}</td>
-                  <td>
+                <tr key={u.id} style={{ borderBottom: "1px solid #ccc" }}>
+                  <td style={tableCellStyle}>{u.id}</td>
+                  <td style={tableCellStyle}>
                     {editUser && editUser.id === u.id ? (
                       <input
                         type="text"
@@ -172,12 +260,13 @@ export default function AdminUsersPage() {
                         onChange={(e) =>
                           setEditUser({ ...editUser, username: e.target.value })
                         }
+                        style={{ padding: "0.3rem" }}
                       />
                     ) : (
                       u.username
                     )}
                   </td>
-                  <td>
+                  <td style={tableCellStyle}>
                     {editUser && editUser.id === u.id ? (
                       <input
                         type="email"
@@ -185,22 +274,63 @@ export default function AdminUsersPage() {
                         onChange={(e) =>
                           setEditUser({ ...editUser, email: e.target.value })
                         }
+                        style={{ padding: "0.3rem" }}
                       />
                     ) : (
                       u.email
                     )}
                   </td>
-                  <td>{u.is_superuser ? "Yes" : "No"}</td>
-                  <td>
+                  <td style={tableCellStyle}>{u.is_superuser ? "Yes" : "No"}</td>
+                  <td style={tableCellStyle}>
                     {editUser && editUser.id === u.id ? (
                       <>
-                        <button onClick={handleUpdateUser}>Save</button>
-                        <button onClick={() => setEditUser(null)}>Cancel</button>
+                        <button
+                          onClick={handleUpdateUser}
+                          style={{
+                            ...actionButtonStyle,
+                            backgroundColor: "green",
+                            color: "#fff",
+                            marginRight: "4px",
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditUser(null)}
+                          style={{
+                            ...actionButtonStyle,
+                            backgroundColor: "#999",
+                            color: "#fff",
+                          }}
+                        >
+                          Cancel
+                        </button>
                       </>
                     ) : (
                       <>
-                        <button onClick={() => setEditUser({ ...u })}>Edit</button>
-                        <button onClick={() => handleDeleteUser(u.id)}>Delete</button>
+                        <button
+                          onClick={() => setEditUser({ ...u })}
+                          style={{
+                            ...actionButtonStyle,
+                            backgroundColor: "#0070f3",
+                            color: "#fff",
+                            marginRight: "4px",
+                          }}
+                          title="Edit user"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => confirmDeleteUser(u)}
+                          style={{
+                            ...actionButtonStyle,
+                            backgroundColor: "red",
+                            color: "#fff",
+                          }}
+                          title="Delete user"
+                        >
+                          🗑️
+                        </button>
                       </>
                     )}
                   </td>
@@ -210,6 +340,80 @@ export default function AdminUsersPage() {
           </table>
         )}
       </section>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {userToDelete && (
+        <div style={modalOverlayStyle}>
+          <div style={modalStyle}>
+            <h3>Confirm Deletion</h3>
+            <p>
+              Are you sure you want to delete user &quot;{userToDelete.username}&quot;?
+            </p>
+            <div style={{ marginTop: "1rem" }}>
+              <button
+                onClick={handleConfirmDelete}
+                style={{
+                  ...actionButtonStyle,
+                  backgroundColor: "red",
+                  color: "#fff",
+                  marginRight: "8px",
+                }}
+              >
+                Yes, Delete
+              </button>
+              <button
+                onClick={() => setUserToDelete(null)}
+                style={{ ...actionButtonStyle, backgroundColor: "#999", color: "#fff" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// Inline styles for the table
+const tableHeaderStyle: React.CSSProperties = {
+  textAlign: "left",
+  padding: "0.5rem",
+  borderBottom: "2px solid #ccc",
+};
+
+const tableCellStyle: React.CSSProperties = {
+  padding: "0.5rem",
+};
+
+// Inline styles for action buttons
+const actionButtonStyle: React.CSSProperties = {
+  padding: "0.3rem 0.6rem",
+  border: "none",
+  borderRadius: "4px",
+  cursor: "pointer",
+  fontSize: "0.9rem",
+};
+
+// Inline styles for the modal overlay & box
+const modalOverlayStyle: React.CSSProperties = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: "rgba(0, 0, 0, 0.5)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 9999,
+};
+
+const modalStyle: React.CSSProperties = {
+  backgroundColor: "#fff",
+  padding: "1.5rem",
+  borderRadius: "6px",
+  width: "300px",
+  maxWidth: "90%",
+  textAlign: "center",
+};

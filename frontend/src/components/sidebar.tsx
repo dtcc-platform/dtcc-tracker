@@ -65,7 +65,11 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
       </nav>
 
       <hr style={{ margin: '1rem 0' }} />
-
+      <div style={expandableContainerStyle}>
+        {isSuperUser && <button style={expandableButtonStyle} onClick={() => window.location.href = '/admin'}>
+          Users
+          </button>}
+      </div>
       {/* Expandable Papers Section */}
       <div style={expandableContainerStyle}>
         <button style={expandableButtonStyle} onClick={() => toggleSection('papers')}>

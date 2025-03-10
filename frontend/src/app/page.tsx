@@ -2,7 +2,6 @@ import fs from 'fs'
 import path from 'path'
 import InfoPage from '@/components/Info';
 
-// This is a server component by default
 export default async function HomePage(props: { searchParams?: Promise<any> }) {
   const searchParams = await props.searchParams;
   const paperIndex = searchParams?.paperIndex;

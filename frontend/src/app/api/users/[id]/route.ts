@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { BASE_URL } from "@/app/types/FixedTypes";
 
 interface Params {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // GET single user
-export async function GET(req: Request, { params }: Params) {
+export async function GET(req: Request, props: Params) {
+  const params = await props.params;
   const authHeader = req.headers.get("Authorization") || "";
 
   const response = await fetch(`${BASE_URL}users/${params.id}/`, {
@@ -22,7 +23,8 @@ export async function GET(req: Request, { params }: Params) {
 }
 
 // PATCH single user (partial update)
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(req: Request, props: Params) {
+  const params = await props.params;
   const authHeader = req.headers.get("Authorization") || "";
   const body = await req.json();
 
@@ -40,7 +42,8 @@ export async function PATCH(req: Request, { params }: Params) {
 }
 
 // DELETE single user
-export async function DELETE(req: Request, { params }: Params) {
+export async function DELETE(req: Request, props: Params) {
+  const params = await props.params;
   const authHeader = req.headers.get("Authorization") || "";
 
   const response = await fetch(`${BASE_URL}users/${params.id}/`, {
