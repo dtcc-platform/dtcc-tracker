@@ -6,7 +6,7 @@ from rest_framework import status, permissions
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import IntegrityError
-from .models import Paper, Project
+from .models import Paper, Project, ChatMessage
 from .serializers import PaperSerializer, ProjectSerializer, CustomTokenVerifySerializer, UserSerializer
 import requests
 from django.views.decorators.csrf import csrf_exempt
@@ -24,7 +24,83 @@ from rest_framework.permissions import IsAdminUser
 class CustomTokenVerifyView(TokenVerifyView):
     serializer_class = CustomTokenVerifySerializer
 
+OLLAMA_API_URL = "http://localhost:11434/api/generate"
 
+class ChatbotView(APIView):
+    # You said you already have JWT auth set up; so the user is authenticated via token
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """
+        Handles a new user message. Sends the last N messages + the new user message to Ollama,
+        gets a reply, stores it, and returns it.
+        """
+        user = request.user
+        message = request.data.get("message", "")
+        if not message:
+            return Response({"error": "Message is required"}, status=400)
+
+        # 1. Store the user's message in the database
+        ChatMessage.objects.create(
+            user=user,
+            role="user",
+            content=message
+        )
+
+        # 2. Retrieve the last N messages (say 10) from the database for this user
+        #    (we reverse them so the oldest is first)
+        recent_messages = ChatMessage.objects.filter(user=user).order_by("-created_at")[:10]
+        recent_messages = reversed(recent_messages)  # so oldest appears first in the prompt
+
+        # 3. Construct the prompt from these messages
+        chat_log = ""
+        for msg in recent_messages:
+            chat_log += f"{msg.role}: {msg.content}\n"
+        chat_log += "assistant:"
+
+        # 4. Call Ollama with "stream": false so we get a single JSON response
+        response = requests.post(
+            OLLAMA_API_URL,
+            json={
+                "model": "gemma2:2b",  # or whichever model you actually have installed
+                "system": "You are a helpful AI assistant.",
+                "prompt": chat_log,
+                "stream": False
+            }
+        )
+
+        if response.status_code != 200:
+            return Response(
+                {"error": f"Ollama returned status {response.status_code}."},
+                status=response.status_code
+            )
+
+        response_data = response.json()
+        bot_reply = response_data.get("response", "No response")
+
+        # 5. Store the assistant's reply in the database
+        ChatMessage.objects.create(
+            user=user,
+            role="assistant",
+            content=bot_reply
+        )
+
+        # 6. Return the reply to the frontend
+        return Response({"response": bot_reply})
+
+    def delete(self, request):
+        """
+        Clears chat history for the current user, e.g. on "Reset Chat" or logout.
+        """
+        user = request.user
+        ChatMessage.objects.filter(user=user).delete()
+        return Response({"message": "Chat history cleared"})
+    
+class ClearChatHistory(APIView):
+    def post(self, request):
+        request.session.flush()  # Clears session, including chat history
+        return Response({"message": "Cleared History successfully"})
+    
 @csrf_exempt
 def forgot_password(request):
     """

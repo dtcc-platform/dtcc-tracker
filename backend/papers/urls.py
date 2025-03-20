@@ -20,4 +20,8 @@ urlpatterns = [
 
     path('users/', UserListCreateAPIView.as_view(), name='user-list-create'),
     path('users/<int:pk>/', UserDetailAPIView.as_view(), name='user-detail'),
+
+    path('chat/', ChatbotView.as_view(), name='chat_placeholder'),
+    path("clear_chat_history/", ClearChatHistory.as_view(), name="clear_history"),
+
 ]

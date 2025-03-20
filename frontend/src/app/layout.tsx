@@ -7,7 +7,7 @@ import Header from '@/components/header';
 import { Paper, Project } from './types/FixedTypes';
 import { RefreshProvider } from '@/app/hooks/RefreshContext';
 import { AuthProvider } from './hooks/AuthContext';
-
+import ChatButton from '@/components/ChatButton';
 export const dynamic = 'force-dynamic';
 
 function getPapers(): Project[] {
@@ -51,6 +51,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 {children}
               </main>
           </div>
+          <ChatButton></ChatButton>
         </body>
       </html>
       </RefreshProvider>

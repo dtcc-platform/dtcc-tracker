@@ -278,5 +278,12 @@ export async function deleteUser(userId: number): Promise<void> {
   if (!response.ok) {
     throw new Error("Failed to delete user");
   }
-  // No JSON body to parse for a 204
+}
+export async function ChatWithBoth(message: string) {
+  const response = await fetchWithAuth(`/api/chat`, { method: "POST",body: JSON.stringify({ message: message }) });
+  if (!response.ok) {
+    throw new Error('Error from Django');
+  }
+  const data = await response.json();
+  return data.response
 }
