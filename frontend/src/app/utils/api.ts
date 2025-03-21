@@ -287,3 +287,12 @@ export async function ChatWithBoth(message: string) {
   const data = await response.json();
   return data.response
 }
+
+export async function ClearChat() {
+  const response = await fetchWithAuth(`/api/chat`, { method: "DELETE" });
+  if (!response.ok) {
+    throw new Error('Error from Django');
+  }
+  const data = await response.json();
+  return data.response
+}

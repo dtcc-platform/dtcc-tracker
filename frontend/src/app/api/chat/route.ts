@@ -30,3 +30,26 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const authHeader = request.headers.get("Authorization");
+    const djangoRes = await fetch('http://127.0.0.1:8000/api/chat/', {
+      method: 'DELETE',
+      headers: { 
+        'Content-Type': 'application/json' ,
+        "Authorization": `${authHeader}`}, 
+      credentials: 'include',
+    });
+
+    if (!djangoRes.ok) {
+    }
+  }catch (error) {
+    console.error('Next.js API error:', error);
+    return NextResponse.json(
+      { error: 'Something went wrong.' },
+      { status: 500 }
+    );
+  }
+  return NextResponse.json({status: 200});
+}

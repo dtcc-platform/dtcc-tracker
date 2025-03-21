@@ -20,6 +20,8 @@ from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.permissions import IsAdminUser
+import ast
+import re
 
 class CustomTokenVerifyView(TokenVerifyView):
     serializer_class = CustomTokenVerifySerializer
@@ -27,7 +29,6 @@ class CustomTokenVerifyView(TokenVerifyView):
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
 
 class ChatbotView(APIView):
-    # You said you already have JWT auth set up; so the user is authenticated via token
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -40,30 +41,33 @@ class ChatbotView(APIView):
         if not message:
             return Response({"error": "Message is required"}, status=400)
 
-        # 1. Store the user's message in the database
         ChatMessage.objects.create(
             user=user,
             role="user",
             content=message
         )
 
-        # 2. Retrieve the last N messages (say 10) from the database for this user
-        #    (we reverse them so the oldest is first)
+       
         recent_messages = ChatMessage.objects.filter(user=user).order_by("-created_at")[:10]
         recent_messages = reversed(recent_messages)  # so oldest appears first in the prompt
 
-        # 3. Construct the prompt from these messages
         chat_log = ""
         for msg in recent_messages:
             chat_log += f"{msg.role}: {msg.content}\n"
         chat_log += "assistant:"
 
-        # 4. Call Ollama with "stream": false so we get a single JSON response
         response = requests.post(
             OLLAMA_API_URL,
             json={
                 "model": "gemma2:2b",  # or whichever model you actually have installed
-                "system": "You are a helpful AI assistant.",
+                "system": """You are a helpful AI assistant. When the user wants to register a project or a paper, 
+                            you should include an intent field in JSON form.
+                            The JSON should be like {
+                                "intent": "register_project",
+                                "answer": "Your actual answer to the users question"}
+                                Valid intents are chitchat register_project register_paper.
+                                even if the intent is chitchat you should still give an answer field and communicate with the user.
+                                """,
                 "prompt": chat_log,
                 "stream": False
             }
@@ -76,17 +80,24 @@ class ChatbotView(APIView):
             )
 
         response_data = response.json()
-        bot_reply = response_data.get("response", "No response")
+        bot_reply_raw = response_data.get("response", "{}")
+        print(bot_reply_raw)
+        match = re.search(r"\{.*?\}", bot_reply_raw, re.DOTALL)
+        print(match)
+        json_answer = match.group(0)
+        print(json_answer)
+        parsed = json.loads(json_answer)
 
-        # 5. Store the assistant's reply in the database
+        intent = parsed.get("intent", "none")
+        bot_reply = parsed.get("answer", "")
         ChatMessage.objects.create(
             user=user,
             role="assistant",
             content=bot_reply
         )
-
-        # 6. Return the reply to the frontend
-        return Response({"response": bot_reply})
+        print(intent)
+        print(chat_log)
+        return Response({"response": bot_reply, 'intent': intent})
 
     def delete(self, request):
         """

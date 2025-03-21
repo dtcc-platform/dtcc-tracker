@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { FormEvent, useEffect, useState } from 'react';
 import { ChatWithBoth } from '@/app/utils/api';
+import { ClearChat } from '@/app/utils/api';
 // If you have an Auth hook, import it here
 // import { useAuth } from '@/app/hooks/AuthContext';
 
@@ -49,6 +50,7 @@ export default function ChatButton() {
   // 5) A basic UI with a reset button just to illustrate
   const handleResetChat = () => {
     setMessages([]);
+    ClearChat();
   };
 
   return (
