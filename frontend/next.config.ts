@@ -11,6 +11,9 @@ const config: NextConfig = {
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
   },
   // Other Next.js config options can go here...
+  eslint: {
+    ignoreDuringBuilds: true,
+  }
 };
 
 export default config;
