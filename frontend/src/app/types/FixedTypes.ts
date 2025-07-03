@@ -28,4 +28,4 @@ export interface User {
 }
 
 
-export const BASE_URL = `${process.env.REACT_APP_API_BASE_URL}/api/`
+export const BASE_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/`
