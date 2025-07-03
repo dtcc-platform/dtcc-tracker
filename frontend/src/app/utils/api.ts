@@ -285,6 +285,7 @@ export async function ChatWithBoth(message: string) {
     throw new Error('Error from Django');
   }
   const data = await response.json();
+  console.log(data)
   return data.response
 }
 

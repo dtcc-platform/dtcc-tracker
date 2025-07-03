@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, use } from "react";
 import { useAuth } from "../hooks/AuthContext";
 import { useRouter } from "next/navigation";
 import styles from "./Login.module.css";
 import Image from "next/image";
 import newLogo from "../../../public/dtcc-logo-new.png";
 import {useRefresh} from "../hooks/RefreshContext";
-
+import { BASE_URL } from "../types/FixedTypes";
 const LoginPage: React.FC = () => {
   const router = useRouter();
   const { login } = useAuth(); // Get login function from auth context
@@ -15,7 +15,9 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null); // Error state
   const {triggerRefresh} =useRefresh()
-  
+  useEffect(() => {
+    console.log("BASE_URL:", BASE_URL);
+  })
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); // Prevent default form submission
   

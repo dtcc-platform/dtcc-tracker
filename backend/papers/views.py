@@ -20,20 +20,28 @@ from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.permissions import IsAdminUser
-import ast
+import boto3
 import re
+from botocore.exceptions import ClientError
 
 class CustomTokenVerifyView(TokenVerifyView):
     serializer_class = CustomTokenVerifySerializer
 
-OLLAMA_API_URL = "http://localhost:11434/api/generate"
+# Bedrock configuration
+BEDROCK_MODEL_ID = "meta.llama3-70b-instruct-v1:0"
+BEDROCK_REGION = "us-west-2"
 
 class ChatbotView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    def __init__(self):
+        super().__init__()
+        # Initialize Bedrock client
+        self.bedrock_client = boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
+
     def post(self, request):
         """
-        Handles a new user message. Sends the last N messages + the new user message to Ollama,
+        Handles a new user message. Sends the last N messages + the new user message to Bedrock,
         gets a reply, stores it, and returns it.
         """
         user = request.user
@@ -41,63 +49,131 @@ class ChatbotView(APIView):
         if not message:
             return Response({"error": "Message is required"}, status=400)
 
+        # Store user message
         ChatMessage.objects.create(
             user=user,
             role="user",
             content=message
         )
 
-       
+        # Get recent messages for context
         recent_messages = ChatMessage.objects.filter(user=user).order_by("-created_at")[:10]
         recent_messages = reversed(recent_messages)  # so oldest appears first in the prompt
 
+        # Build chat log
         chat_log = ""
         for msg in recent_messages:
             chat_log += f"{msg.role}: {msg.content}\n"
-        chat_log += "assistant:"
 
-        response = requests.post(
-            OLLAMA_API_URL,
-            json={
-                "model": "gemma2:2b",  # or whichever model you actually have installed
-                "system": """You are a helpful AI assistant. When the user wants to register a project or a paper, 
-                            you should include an intent field in JSON form.
-                            The JSON should be like {
-                                "intent": "register_project",
-                                "answer": "Your actual answer to the users question"}
-                                Valid intents are chitchat register_project register_paper.
-                                even if the intent is chitchat you should still give an answer field and communicate with the user.
-                                """,
-                "prompt": chat_log,
-                "stream": False
-            }
-        )
+        # Create the system prompt and user message
+        system_prompt = """You are a helpful AI assistant. When the user wants to register a project or a paper, 
+                        you should include an intent field in JSON form.
+                        The JSON should be like {
+                            "intent": "register_project",
+                            "answer": "Your actual answer to the users question"}
+                            Valid intents are chitchat register_project register_paper.
+                            even if the intent is chitchat you should still give an answer field and communicate with the user.
+                            """
 
-        if response.status_code != 200:
-            return Response(
-                {"error": f"Ollama returned status {response.status_code}."},
-                status=response.status_code
+        # Format the prompt in Llama 3's instruction format
+        formatted_prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+        {system_prompt}
+        <|eot_id|><|start_header_id|>user<|end_header_id|>
+        {chat_log}
+        <|eot_id|><|start_header_id|>assistant<|end_header_id|>
+        """
+
+        # Format the request payload using the model's native structure
+        native_request = {
+            "prompt": formatted_prompt,
+            "max_gen_len": 512,
+            "temperature": 0.5,
+        }
+
+        try:
+            # Convert the native request to JSON
+            request_body = json.dumps(native_request)
+            
+            # Invoke the model with the request
+            response = self.bedrock_client.invoke_model(
+                modelId=BEDROCK_MODEL_ID, 
+                body=request_body
             )
+            
+            # Decode the response body
+            model_response = json.loads(response["body"].read())
+            
+            # Extract the response text
+            bot_reply_raw = model_response["generation"]
+            print(f"Raw Bedrock response: {bot_reply_raw}")
+            
+            # Extract JSON from the response (same logic as before)
+            match = re.search(r"\{.*?\}", bot_reply_raw, re.DOTALL)
+            if not match:
+                # Fallback if no JSON found
+                return Response(
+                    {"error": "Could not parse response from AI model"},
+                    status=500
+                )
+            
+            json_answer = match.group(0)
+            print(f"Extracted JSON: {json_answer}")
+            
+            try:
+                parsed = json.loads(json_answer)
+            except json.JSONDecodeError:
+                return Response(
+                    {"error": "Invalid JSON response from AI model"},
+                    status=500
+                )
 
-        response_data = response.json()
-        bot_reply_raw = response_data.get("response", "{}")
-        print(bot_reply_raw)
-        match = re.search(r"\{.*?\}", bot_reply_raw, re.DOTALL)
-        print(match)
-        json_answer = match.group(0)
-        print(json_answer)
-        parsed = json.loads(json_answer)
+            intent = parsed.get("intent", "none")
+            bot_reply = parsed.get("answer", "")
+            
+            # Store assistant message
+            ChatMessage.objects.create(
+                user=user,
+                role="assistant",
+                content=bot_reply
+            )
+            
+            print(f"Intent: {intent}")
+            print(f"Chat log: {chat_log}")
+            
+            return Response({"response": bot_reply, 'intent': intent})
 
-        intent = parsed.get("intent", "none")
-        bot_reply = parsed.get("answer", "")
-        ChatMessage.objects.create(
-            user=user,
-            role="assistant",
-            content=bot_reply
-        )
-        print(intent)
-        print(chat_log)
-        return Response({"response": bot_reply, 'intent': intent})
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            error_message = e.response['Error']['Message']
+            print(f"AWS ClientError: {error_code} - {error_message}")
+            
+            if error_code == 'ValidationException':
+                return Response(
+                    {"error": "Model validation error. Check model availability and request format."},
+                    status=500
+                )
+            elif error_code == 'AccessDeniedException':
+                return Response(
+                    {"error": "Access denied. Check IAM permissions and model access."},
+                    status=500
+                )
+            elif error_code == 'ResourceNotFoundException':
+                return Response(
+                    {"error": "Model not found. Check model ID and availability."},
+                    status=500
+                )
+            else:
+                return Response(
+                    {"error": f"AWS error: {error_message}"},
+                    status=500
+                )
+                
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return Response(
+                {"error": "An unexpected error occurred while processing your request."},
+                status=500
+            )
 
     def delete(self, request):
         """

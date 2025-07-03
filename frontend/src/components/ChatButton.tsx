@@ -39,6 +39,7 @@ export default function ChatButton() {
       const response = await ChatWithBoth(trimmed);
       // data.response should be "Message received successfully"
       setMessages((prev) => [...prev, `Server: ${response}`]);
+      console.log(response)
     } catch (error) {
       console.error('Fetch error:', error);
       setMessages((prev) => [...prev, 'Server: Something went wrong.']);
