@@ -36,13 +36,11 @@ class ChatbotView(APIView):
 
     def __init__(self):
         super().__init__()
-        # Initialize Bedrock client
         self.bedrock_client = boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
 
     def post(self, request):
         """
-        Handles a new user message. Sends the last N messages + the new user message to Bedrock,
-        gets a reply, stores it, and returns it.
+        Enhanced chatbot that can handle project/paper registration automatically
         """
         user = request.user
         message = request.data.get("message", "")
@@ -58,24 +56,58 @@ class ChatbotView(APIView):
 
         # Get recent messages for context
         recent_messages = ChatMessage.objects.filter(user=user).order_by("-created_at")[:10]
-        recent_messages = reversed(recent_messages)  # so oldest appears first in the prompt
+        recent_messages = reversed(recent_messages)
 
         # Build chat log
         chat_log = ""
         for msg in recent_messages:
             chat_log += f"{msg.role}: {msg.content}\n"
 
-        # Create the system prompt and user message
-        system_prompt = """You are a helpful AI assistant. When the user wants to register a project or a paper, 
-                        you should include an intent field in JSON form.
-                        The JSON should be like {
-                            "intent": "register_project",
-                            "answer": "Your actual answer to the users question"}
-                            Valid intents are chitchat register_project register_paper.
-                            even if the intent is chitchat you should still give an answer field and communicate with the user.
-                            """
+        # Enhanced system prompt with registration capabilities
+        system_prompt = """You are a helpful AI assistant that can register projects and papers for users.
 
-        # Format the prompt in Llama 3's instruction format
+When a user wants to register a project, you need these fields:
+- project_name (required, string)
+- status (required, string)
+- pi (optional, string, Principal Investigator)
+- funding_body (optional, string)
+- documents (optional, string)
+- additional_authors (optional, list of strings)
+
+When a user wants to register a paper, you need these fields:
+- doi (required, string, unique identifier)
+- title (required, string)
+- author_name (required, string, main author)
+- journal (required, string)
+- date (required, string)
+- additional_authors (optional, list of strings)
+
+Your response should ALWAYS be in JSON format with these fields:
+{
+    "intent": "chitchat" | "register_project" | "register_paper" | "collect_info",
+    "answer": "Your conversational response to the user",
+    "action": "none" | "register_project" | "register_paper" | "ask_for_info",
+    "collected_data": {
+        // Only include fields that the user has provided
+        // For projects: project_name, status, pi, funding_body, documents, additional_authors
+        // For papers: doi, title, author_name, journal, date, additional_authors
+    },
+    "missing_fields": [
+        // List of required fields that are still missing
+    ],
+    "next_question": "What specific question to ask next (if any)"
+}
+
+Rules:
+1. If user expresses intent to register but hasn't provided all required fields, set action to "ask_for_info"
+2. If user provides partial information, collect what they gave and ask for what's missing
+3. Only set action to "register_project" or "register_paper" when ALL required fields are collected
+4. Be conversational and helpful - don't just ask for fields in a robotic way
+5. If user provides a DOI, offer to fetch metadata automatically
+6. Remember information from previous messages in the conversation
+"""
+
+        # Format the prompt
         formatted_prompt = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
         {system_prompt}
         <|eot_id|><|start_header_id|>user<|end_header_id|>
@@ -83,40 +115,53 @@ class ChatbotView(APIView):
         <|eot_id|><|start_header_id|>assistant<|end_header_id|>
         """
 
-        # Format the request payload using the model's native structure
+        # Format the request payload
         native_request = {
             "prompt": formatted_prompt,
-            "max_gen_len": 512,
-            "temperature": 0.5,
+            "max_gen_len": 1024,
+            "temperature": 0.3,
         }
 
         try:
-            # Convert the native request to JSON
             request_body = json.dumps(native_request)
-            
-            # Invoke the model with the request
             response = self.bedrock_client.invoke_model(
                 modelId=BEDROCK_MODEL_ID, 
                 body=request_body
             )
             
-            # Decode the response body
             model_response = json.loads(response["body"].read())
-            
-            # Extract the response text
             bot_reply_raw = model_response["generation"]
             print(f"Raw Bedrock response: {bot_reply_raw}")
             
-            # Extract JSON from the response (same logic as before)
-            match = re.search(r"\{.*?\}", bot_reply_raw, re.DOTALL)
-            if not match:
-                # Fallback if no JSON found
+            # Extract JSON from the response
+            def extract_json_from_response(response_text):
+                """
+                Extract JSON from response text, handling nested objects properly
+                """
+                # Find the start of JSON
+                start_idx = response_text.find('{')
+                if start_idx == -1:
+                    return None
+                
+                # Count braces to find the matching closing brace
+                brace_count = 0
+                for i, char in enumerate(response_text[start_idx:], start_idx):
+                    if char == '{':
+                        brace_count += 1
+                    elif char == '}':
+                        brace_count -= 1
+                        if brace_count == 0:
+                            # Found the matching closing brace
+                            return response_text[start_idx:i+1]
+                
+                # If we get here, no matching closing brace was found
+                return None
+            json_answer = extract_json_from_response(bot_reply_raw)
+            if not json_answer:
                 return Response(
                     {"error": "Could not parse response from AI model"},
                     status=500
                 )
-            
-            json_answer = match.group(0)
             print(f"Extracted JSON: {json_answer}")
             
             try:
@@ -127,8 +172,11 @@ class ChatbotView(APIView):
                     status=500
                 )
 
-            intent = parsed.get("intent", "none")
+            intent = parsed.get("intent", "chitchat")
             bot_reply = parsed.get("answer", "")
+            action = parsed.get("action", "none")
+            collected_data = parsed.get("collected_data", {})
+            missing_fields = parsed.get("missing_fields", [])
             
             # Store assistant message
             ChatMessage.objects.create(
@@ -137,48 +185,155 @@ class ChatbotView(APIView):
                 content=bot_reply
             )
             
-            print(f"Intent: {intent}")
-            print(f"Chat log: {chat_log}")
+            # Handle actions
+            if action == "register_project":
+                result = self._register_project(user, collected_data)
+                if result["success"]:
+                    bot_reply += f"\n\n✅ Great! I've successfully registered your project '{collected_data.get('project_name')}' in the system."
+                else:
+                    bot_reply += f"\n\n❌ Sorry, there was an error registering your project: {result['error']}"
+                    
+            elif action == "register_paper":
+                result = self._register_paper(user, collected_data)
+                if result["success"]:
+                    bot_reply += f"\n\n✅ Excellent! I've successfully registered your paper '{collected_data.get('title')}' in the system."
+                else:
+                    bot_reply += f"\n\n❌ Sorry, there was an error registering your paper: {result['error']}"
             
-            return Response({"response": bot_reply, 'intent': intent})
+            return Response({
+                "response": bot_reply,
+                "intent": intent,
+                "action": action,
+                "collected_data": collected_data,
+                "missing_fields": missing_fields
+            })
 
-        except ClientError as e:
-            error_code = e.response['Error']['Code']
-            error_message = e.response['Error']['Message']
-            print(f"AWS ClientError: {error_code} - {error_message}")
-            
-            if error_code == 'ValidationException':
-                return Response(
-                    {"error": "Model validation error. Check model availability and request format."},
-                    status=500
-                )
-            elif error_code == 'AccessDeniedException':
-                return Response(
-                    {"error": "Access denied. Check IAM permissions and model access."},
-                    status=500
-                )
-            elif error_code == 'ResourceNotFoundException':
-                return Response(
-                    {"error": "Model not found. Check model ID and availability."},
-                    status=500
-                )
-            else:
-                return Response(
-                    {"error": f"AWS error: {error_message}"},
-                    status=500
-                )
-                
         except Exception as e:
-            print(f"Unexpected error: {e}")
+            print(f"Error in chatbot: {e}")
             return Response(
-                {"error": "An unexpected error occurred while processing your request."},
+                {"error": "An error occurred while processing your request."},
                 status=500
             )
 
+    def _register_project(self, user, data):
+        """Register a project with the collected data"""
+        try:
+            # Validate required fields
+            required_fields = ['project_name', 'status']
+            for field in required_fields:
+                if not data.get(field):
+                    return {"success": False, "error": f"{field} is required"}
+            
+            # Check if project already exists for this user
+            if Project.objects.filter(project_name=data['project_name'], user=user).exists():
+                return {"success": False, "error": "A project with this name already exists"}
+            
+            # Create the project
+            project_data = {
+                'project_name': data['project_name'],
+                'status': data['status'],
+                'pi': data.get('pi', ''),
+                'funding_body': data.get('funding_body', ''),
+                'documents': data.get('documents', ''),
+                'additional_authors': data.get('additional_authors', [])
+            }
+            
+            # Ensure additional_authors is a list
+            if isinstance(project_data['additional_authors'], str):
+                # If it's a string, split by comma
+                project_data['additional_authors'] = [author.strip() for author in project_data['additional_authors'].split(',') if author.strip()]
+            
+            serializer = ProjectSerializer(data=project_data, context={'request': type('Request', (), {'user': user})()})
+            
+            if serializer.is_valid():
+                serializer.save()
+                return {"success": True, "project": serializer.data}
+            else:
+                return {"success": False, "error": str(serializer.errors)}
+                
+        except Exception as e:
+            print(f"Error registering project: {e}")
+            return {"success": False, "error": "An unexpected error occurred"}
+
+    def _register_paper(self, user, data):
+        """Register a paper with the collected data"""
+        try:
+            # Validate required fields
+            required_fields = ['doi', 'title', 'author_name', 'journal', 'date']
+            for field in required_fields:
+                if not data.get(field):
+                    return {"success": False, "error": f"{field} is required"}
+            
+            # Check if paper already exists for this user
+            if Paper.objects.filter(doi=data['doi'], user=user).exists():
+                return {"success": False, "error": "A paper with this DOI already exists for your account"}
+            
+            # If DOI is provided, try to fetch additional metadata
+            if data.get('doi') and not all([data.get('title'), data.get('author_name'), data.get('journal')]):
+                metadata = fetch_doi_metadata(data['doi'])
+                if 'error' not in metadata:
+                    # Merge fetched metadata with user-provided data
+                    data.setdefault('journal', metadata.get('Journal', ''))
+                    data.setdefault('date', metadata.get('PublishedOn', ''))
+                    if not data.get('title'):
+                        data['title'] = metadata.get('Title', '')
+                    if not data.get('author_name'):
+                        data['author_name'] = metadata.get('Authors', {}).get('Main Author', '')
+                    if not data.get('additional_authors'):
+                        additional_authors = metadata.get('Authors', {}).get('Additional Authors', [])
+                        data['additional_authors'] = additional_authors
+            
+            # Create the paper
+            paper_data = {
+                'doi': data['doi'],
+                'title': data['title'],
+                'author_name': data['author_name'],
+                'journal': data['journal'],
+                'date': data['date'],
+                'additional_authors': data.get('additional_authors', [])
+            }
+            
+            # Ensure additional_authors is a list
+            if isinstance(paper_data['additional_authors'], str):
+                # If it's a string, split by comma
+                paper_data['additional_authors'] = [author.strip() for author in paper_data['additional_authors'].split(',') if author.strip()]
+            
+            serializer = PaperSerializer(data=paper_data, context={'request': type('Request', (), {'user': user})()})
+            
+            if serializer.is_valid():
+                serializer.save(user=user)
+                return {"success": True, "paper": serializer.data}
+            else:
+                return {"success": False, "error": str(serializer.errors)}
+                
+        except Exception as e:
+            print(f"Error registering paper: {e}")
+            return {"success": False, "error": "An unexpected error occurred"}
+    
+    
+
+    # Alternative method using json.loads with error handling
+    def extract_json_from_response_alt(response_text):
+        """
+        Alternative method: try to find JSON by attempting to parse substrings
+        """
+        start_idx = response_text.find('{')
+        if start_idx == -1:
+            return None
+        
+        # Try parsing increasingly larger substrings
+        for end_idx in range(len(response_text), start_idx, -1):
+            try:
+                potential_json = response_text[start_idx:end_idx].strip()
+                if potential_json.endswith('}'):
+                    return json.loads(potential_json)
+            except json.JSONDecodeError:
+                continue
+        
+        return None
+
     def delete(self, request):
-        """
-        Clears chat history for the current user, e.g. on "Reset Chat" or logout.
-        """
+        """Clear chat history for the current user"""
         user = request.user
         ChatMessage.objects.filter(user=user).delete()
         return Response({"message": "Chat history cleared"})
