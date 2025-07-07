@@ -53,7 +53,7 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
 
   return (
     <div style={sidebarContainerStyle}>
-      <div style={{ height: '64px' }}>{user}</div>  
+      <div style={{ height: '64px',display: 'flex', justifyContent: 'center', alignItems: 'center' }}>Welcome, {user}</div>  
 
       <nav style={navStyle}>
         <Link href="/submit-paper">

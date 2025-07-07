@@ -2,14 +2,12 @@ import './globals.css';
 import { ReactNode } from 'react';
 import path from 'path';
 import fs from 'fs';
-import Sidebar from '@/components/sidebar';
 import Header from '@/components/header';
 import { Paper, Project } from './types/FixedTypes';
 import { RefreshProvider } from '@/app/hooks/RefreshContext';
 import { AuthProvider } from './hooks/AuthContext';
 import ChatButton from '@/components/ChatButton';
 export const dynamic = 'force-dynamic';
-
 function getPapers(): Project[] {
   try {
     const filePath = path.join(process.cwd(), 'src', 'data', 'papers.json');
@@ -24,6 +22,9 @@ function getPapers(): Project[] {
 export const metadata = {
   title: 'DTCC Tracker',
   description: 'A Next.js 13+ app for paper submissions.',
+  icons: {
+    icon: '/favicon.ico',
+  }
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -34,12 +35,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <RefreshProvider>
-      <html lang="en">
-        <body style={{ margin: 0, padding: 0 }}>
-          <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-            {/* Sidebar */}
-            
-              <Header></Header>
+        <html lang="en">
+          <body style={{ margin: 0, padding: 0 }}>
+            <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+              {/* Sidebar */}
+
+              <Header/>
               {/* Page content */}
               <main
                 style={{
@@ -50,10 +51,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               >
                 {children}
               </main>
-          </div>
-          <ChatButton></ChatButton>
-        </body>
-      </html>
+            </div>
+            <ChatButton></ChatButton>
+          </body>
+        </html>
       </RefreshProvider>
     </AuthProvider>
   );
