@@ -16,16 +16,15 @@ export default function ChatButton() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  if (pathname === '/login') {
-    return null;
-  }
-
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoading]);
 
+  if (pathname === '/login') {
+    return null;
+  }
 
   const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
