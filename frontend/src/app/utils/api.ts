@@ -1,7 +1,6 @@
 const PROJECTS_API = '/api/projects';
 const PAPER_API = '/api/papers';
 
-import { NextResponse } from "next/server";
 import { Paper, Project } from "../types/FixedTypes";
 import {User} from "../types/FixedTypes"
 
@@ -286,7 +285,7 @@ export async function ChatWithBoth(message: string) {
   }
   const data = await response.json();
   console.log(data)
-  return data.response
+  return { response: data.response, refresh: data.refresh };
 }
 
 export async function ClearChat() {

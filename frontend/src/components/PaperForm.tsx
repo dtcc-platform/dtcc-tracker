@@ -54,8 +54,8 @@ const PaperForm: React.FC<PaperFormProps> = ({
     };
 
     return (
-        <div className="flex flex-col items-center justify-center h-screen bg-gray-100 p-4">
-            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '90vh' }}>
+            <div className="bg-white p-6 rounded-lg shadow-lg">
                 <h1 className="text-center text-xl font-bold mb-4">Paper Details</h1>
 
                 <div className="flex flex-col gap-3">
@@ -102,7 +102,7 @@ const PaperForm: React.FC<PaperFormProps> = ({
                     <label className="block">
                         <strong>Published Date:</strong>
                         <input
-                            type="text"
+                            type="date"
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
                             className="w-full p-2 border border-blue-500 rounded mt-1"

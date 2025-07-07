@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     const data = await djangoRes.json();
     console.log(data);
-    return NextResponse.json({ response: data.response });
+    return NextResponse.json({ response: data.response, refresh: (data.action === "register_project" || data.action === "register_paper") });
   } catch (error) {
     console.error('Next.js API error:', error);
     return NextResponse.json(

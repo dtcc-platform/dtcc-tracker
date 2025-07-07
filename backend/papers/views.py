@@ -639,8 +639,8 @@ class UserListCreateAPIView(APIView):
     permission_classes = [IsAdminUser]  # Only admin/superuser can access
 
     def get(self, request):
-        """List all users."""
-        users = User.objects.all()
+        """List all users except superusers."""
+        users = User.objects.filter(is_superuser=False)
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 

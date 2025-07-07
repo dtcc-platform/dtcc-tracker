@@ -1,45 +1,48 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState, useRef } from 'react';
 import { ChatWithBoth } from '@/app/utils/api';
 import { ClearChat } from '@/app/utils/api';
-// If you have an Auth hook, import it here
-// import { useAuth } from '@/app/hooks/AuthContext';
+import { useRefresh } from '@/app/hooks/RefreshContext';
 
 export default function ChatButton() {
   const pathname = usePathname();
-  // const { isLoggedIn } = useAuth(); // If you need login checks
-
+  const {triggerRefresh} = useRefresh();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<string[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 1) Optionally skip rendering on /login, if desired
   if (pathname === '/login') {
     return null;
   }
 
-  // 2) If you want to persist messages or handle logout resets, add localStorage logic here (omitted for brevity)
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading]);
 
-  // 3) Handle sending a new message
+
   const handleSendMessage = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const trimmed = inputValue.trim();
     if (!trimmed) return;
 
-    // Add the user's message to the chat
     setMessages((prev) => [...prev, `User: ${trimmed}`]);
     setInputValue('');
     setIsLoading(true);
 
     try {
-      // 4) POST to Django endpoint (change host if needed)
       const response = await ChatWithBoth(trimmed);
-      // data.response should be "Message received successfully"
-      setMessages((prev) => [...prev, `Server: ${response}`]);
+      setMessages((prev) => [...prev, `Server: ${response.response}`]);
       console.log(response)
+      if (response.refresh) {
+        triggerRefresh();
+      }
     } catch (error) {
       console.error('Fetch error:', error);
       setMessages((prev) => [...prev, 'Server: Something went wrong.']);
@@ -48,7 +51,6 @@ export default function ChatButton() {
     }
   };
 
-  // 5) A basic UI with a reset button just to illustrate
   const handleResetChat = () => {
     setMessages([]);
     ClearChat();
@@ -156,6 +158,8 @@ export default function ChatButton() {
                 Server is processing...
               </div>
             )}
+            {/* This div will be used as the scroll target */}
+            <div ref={messagesEndRef} />
           </div>
 
           <form onSubmit={handleSendMessage} style={{ display: 'flex' }}>

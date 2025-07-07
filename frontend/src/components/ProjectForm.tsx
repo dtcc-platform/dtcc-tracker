@@ -59,9 +59,9 @@ const PaperForm: React.FC<PaperFormProps> = ({
     };
 
     return (
-        <div className="flex flex-col items-center justify-center h-screen bg-gray-100 p-4">
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '90vh'}}>
             <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-                <h1 className="text-center text-xl font-bold mb-4">Paper Details</h1>
+                <h1 className="text-center text-xl font-bold mb-4">Project Details</h1>
 
                 <div className="flex flex-col gap-3">
                     <label className="block">
