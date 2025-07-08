@@ -20,7 +20,8 @@ export default function EditProjectClient({ paperIndex}: EditProjectClientProps)
     pi: project.pi,
     fundingBody: project.fundingBody,
     documents: project.documents,
-    additionalAuthors: project.additionalAuthors
+    additionalAuthors: project.additionalAuthors,
+    amount: project.amount,
   })
 
   const handleChange = (key: keyof Project, value: string | string[]) => {
@@ -68,6 +69,8 @@ export default function EditProjectClient({ paperIndex}: EditProjectClientProps)
           setFundingBody={(value) => handleChange('fundingBody', value)}
           Documents={newProject.documents}
           setDocuments={(value) => handleChange('documents', value)}
+          amount={newProject.amount}
+          setAmount={(value) => handleChange('amount', value)}
           fundingbdytypes={fundingBodyTypes}
           additionalAuthors={newProject.additionalAuthors}
           setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}

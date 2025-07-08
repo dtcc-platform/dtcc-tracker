@@ -22,7 +22,8 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
     journal: paper.journal,
     date: paper.date,
     additionalAuthors: paper.additionalAuthors,
-    id: paper.id
+    id: paper.id,
+    publicationType: paper.publicationType
   })
 
   const handleChange = (key: keyof Paper, value: string| string[]) => {
@@ -66,6 +67,8 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
         setDate={(value) => handleChange('date', value)}
         journal={newPaper.journal}
         setJournal={(value) => handleChange('journal', value)}
+        publicationType={newPaper.publicationType}
+        setPublicationType={(value) => handleChange('publicationType', value)}
         additionalAuthors={newPaper.additionalAuthors}
         setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
         onSave={handleSubmit}

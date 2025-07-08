@@ -63,7 +63,8 @@ const ResultPage: React.FC = () => {
         journal: searchParams.get('journal') || '',
         date: formattedDate,
         title: searchParams.get('title') || '',
-        additionalAuthors: parsedAuthors["Additional Authors"]
+        additionalAuthors: parsedAuthors["Additional Authors"],
+        publicationType: searchParams.get('publicationType') || '',
     })
     
     console.log(retrievedPaper)
@@ -118,6 +119,8 @@ const ResultPage: React.FC = () => {
             setJournal={(value) => handleChange('journal', value)}
             date={retrievedPaper.date}
             setDate={(value) => handleChange('date', value)}
+            publicationType={retrievedPaper.publicationType}
+            setPublicationType={(value) => handleChange('publicationType', value)}
             additionalAuthors={retrievedPaper.additionalAuthors}
             setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
             onSave={handleSave}

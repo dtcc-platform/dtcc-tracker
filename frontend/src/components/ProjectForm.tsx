@@ -14,6 +14,8 @@ interface PaperFormProps {
     statuses: string[]
     fundingBody: string
     setFundingBody:(value: string) => void;
+    amount: string
+    setAmount: (value: string) => void;
     fundingbdytypes: string[]
     additionalAuthors: string[];
     setAdditionalAuthors: (value: string[]) => void;
@@ -33,6 +35,8 @@ const PaperForm: React.FC<PaperFormProps> = ({
     statuses,
     fundingBody,
     setFundingBody,
+    amount, 
+    setAmount,
     fundingbdytypes,
     additionalAuthors,
     setAdditionalAuthors,
@@ -89,6 +93,16 @@ const PaperForm: React.FC<PaperFormProps> = ({
                             type="text"
                             value={Documents}
                             onChange={(e) => setDocuments(e.target.value)}
+                            className="w-full p-2 border border-blue-500 rounded mt-1"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <strong>Amount:</strong>
+                        <input
+                            type="text"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
                             className="w-full p-2 border border-blue-500 rounded mt-1"
                         />
                     </label>

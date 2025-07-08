@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
+import Dropdown from "./dropdown";
 
 interface PaperFormProps {
     authorName: string;
@@ -14,6 +15,8 @@ interface PaperFormProps {
     setJournal: (value: string) => void;
     date: string;
     setDate: (value: string) => void;
+    publicationType: string;
+    setPublicationType: (value: string) => void;
     additionalAuthors: string[];
     setAdditionalAuthors: (value: string[]) => void;
     onSave: () => void;
@@ -31,13 +34,15 @@ const PaperForm: React.FC<PaperFormProps> = ({
     setJournal,
     date,
     setDate,
+    publicationType,
+    setPublicationType,
     additionalAuthors,
     setAdditionalAuthors,
     onSave,
     onBack,
 }) => {
     const router = useRouter();
-
+    const publicationTypes = ["Article in journal", "Monograph", "Conference Paper", "Book Chapter", "Other"];
     const addAuthor = () => {
         setAdditionalAuthors([...additionalAuthors, '']);
     };
@@ -106,6 +111,16 @@ const PaperForm: React.FC<PaperFormProps> = ({
                             value={date}
                             onChange={(e) => setDate(e.target.value)}
                             className="w-full p-2 border border-blue-500 rounded mt-1"
+                        />
+                    </label>
+
+                    <label className="block">
+                        <strong>Publication Type:</strong>
+                        <Dropdown
+                          options={publicationTypes}
+                          value={publicationType}
+                          onChange={setPublicationType}
+                          placeholder='Select publication type'
                         />
                     </label>
 

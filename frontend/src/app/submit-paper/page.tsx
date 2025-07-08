@@ -17,6 +17,7 @@ const InputPage: React.FC = () => {
         date: '',
         title: '',
         additionalAuthors: [],
+        publicationType: ''
     });
     const [additionalAuthors, setAdditionalAuthors] = useState<string[]>([]);
     const { triggerRefresh } = useRefresh();
@@ -60,7 +61,6 @@ const InputPage: React.FC = () => {
 
     const handleRetrieve = async () => {
         const data = await fetchDoiMetadata(paper.doi);
-
         if (data) {
             const queryString = new URLSearchParams({
                 journal: data.Journal || '',
@@ -69,8 +69,9 @@ const InputPage: React.FC = () => {
                 authors: JSON.stringify(data.Authors) || '',
                 publishedOn: data.PublishedOn || '',
                 publisher: data.Publisher || '',
+                publicationType: data.PublicationType || '',
             }).toString();
-
+            console.log(data);
             router.push(`/result?${queryString}`);
         } else {
             console.error('Failed to retrieve DOI metadata.');
@@ -102,6 +103,8 @@ const InputPage: React.FC = () => {
                     setJournal={(value) => handleChange('journal', value)}
                     date={paper.date}
                     setDate={(value) => handleChange('date', value)}
+                    publicationType={paper.publicationType}
+                    setPublicationType={(value) => handleChange('publicationType', value)}
                     additionalAuthors={paper.additionalAuthors}
                     setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
                     onSave={handleSave}

@@ -18,6 +18,7 @@ export default function SubmitPaper1Page() {
     fundingBody: '',
     documents: '',
     additionalAuthors: [],
+    amount: ''
   })
   const handleChange = (key: keyof Project, value: string | string[]) => {
     setPaper((prev) => ({ ...prev, [key]: value }))
@@ -66,6 +67,8 @@ export default function SubmitPaper1Page() {
         setFundingBody={(value) => handleChange('fundingBody', value)}
         Documents={newProject.documents}
         setDocuments={(value) => handleChange('documents', value)}
+        amount={newProject.amount}
+        setAmount={(value) => handleChange('amount', value)}
         fundingbdytypes={fundingBodyTypes}
         additionalAuthors={newProject.additionalAuthors}
         setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}

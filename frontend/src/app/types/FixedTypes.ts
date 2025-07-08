@@ -8,6 +8,7 @@ export interface Project {
   documents: string
   additionalAuthors: string[]
   submittedBy? : string
+  amount: string
 }
 export interface Paper{
   id?: number
@@ -18,6 +19,8 @@ export interface Paper{
   date:string
   additionalAuthors: string[]
   submittedBy? : string
+  publicationType: string
+
 }
 export interface User {
   id: number;

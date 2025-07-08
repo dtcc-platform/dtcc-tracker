@@ -9,6 +9,7 @@ class Project(models.Model):
     documents = models.CharField(max_length=255, null=True, blank=True)
     additional_authors = models.JSONField(default=list)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    amount = models.CharField(max_length=255, default="0")
 
     class Meta:
         unique_together = ('user', 'project_name')
@@ -23,6 +24,7 @@ class Paper(models.Model):
     date = models.CharField(max_length=255)
     additional_authors = models.JSONField(default=list)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    publication_type = models.CharField(max_length=255, default="")
 
     class Meta: 
         unique_together = ('user', 'doi')

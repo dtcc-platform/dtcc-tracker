@@ -198,6 +198,7 @@ export interface DoiMetadata {
   Publisher: string;
   DOI: string;
   Journal: string;
+  PublicationType: string;
 }
 
 export const fetchDoiMetadata = async (doi: string): Promise<DoiMetadata | null> => {
@@ -212,8 +213,8 @@ export const fetchDoiMetadata = async (doi: string): Promise<DoiMetadata | null>
           console.error('Invalid DOI:', await response.json());
           return null;
       }
-
-      return await response.json();
+      const data = await response.json();
+      return data;
   } catch (error) {
       console.error('Error fetching DOI metadata:', error);
       return null;

@@ -39,6 +39,8 @@ export default function InfoPage({ paperIndex, projectIndex }: Info) {
                             <p><strong>Additional Authors:</strong> {selectedProject.additionalAuthors && selectedProject.additionalAuthors.length > 0 ? selectedProject.additionalAuthors.join(', ') : '-'}</p>
                             <p><strong>Funding Body:</strong> {selectedProject.fundingBody || '-'}</p>
                             <p><strong>Documents Link:</strong> {selectedProject.documents || '-'}</p>
+                            <p><strong>Amount:</strong> {selectedProject.amount || '-'}</p>
+                            <p><strong>Status:</strong> {selectedProject.status || '-'}</p>
                         </div>
                     </div>
                 </div>
@@ -54,6 +56,7 @@ export default function InfoPage({ paperIndex, projectIndex }: Info) {
                                 <p><strong>DOI:</strong> {selectedPaper.doi || '-'}</p>
                                 <p><strong>Date:</strong> {selectedPaper.date || '-'}</p>
                                 <p><strong>Journal:</strong> {selectedPaper.journal || '-'}</p>
+                                <p><strong>Publication Type:</strong> {selectedPaper.publicationType || '-'}</p>
                             </div>
                         </div>
                     </div>

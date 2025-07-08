@@ -602,6 +602,36 @@ def fetch_doi_metadata(doi):
 
             publisher = message.get('publisher', 'N/A')
             journal = message.get('container-title', ['N/A'])[0]
+            
+            # Map Crossref type to your publication type categories
+            def get_publication_type(crossref_type):
+                """Map Crossref type to publication type categories."""
+                type_mapping = {
+                    'journal-article': 'Article in journal',
+                    'monograph': 'monograph',
+                    'book': 'monograph',
+                    'book-chapter': 'monograph',
+                    'proceedings-article': 'conference paper',
+                    'paper-conference': 'conference paper',
+                    'book-part': 'monograph',
+                    'reference-entry': 'monograph',
+                    'dataset': 'other',
+                    'component': 'other',
+                    'report': 'other',
+                    'thesis': 'other',
+                    'dissertation': 'other',
+                    'posted-content': 'other',
+                    'preprint': 'other',
+                    'standard': 'other',
+                    'peer-review': 'other',
+                    'editorial': 'other',
+                    'review': 'other',
+                    'other': 'other'
+                }
+                return type_mapping.get(crossref_type, 'other')
+            
+            crossref_type = message.get('type', 'other')
+            publication_type = get_publication_type(crossref_type)
 
             metadata = {
                 "Title": title,
@@ -612,13 +642,15 @@ def fetch_doi_metadata(doi):
                 "PublishedOn": published_date,
                 "Publisher": publisher,
                 "DOI": doi,
-                "Journal": journal
+                "Journal": journal,
+                "PublicationType": publication_type
             }
             return metadata
         else:
             return {"error": "Invalid response structure from Crossref API."}
     else:
         return {"error": f"Failed to fetch metadata for DOI {doi}. HTTP Status: {response.status_code}"}
+
 
 class DOIInfoView(APIView):
     def post(self, request):

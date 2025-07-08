@@ -57,10 +57,10 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
 
       <nav style={navStyle}>
         <Link href="/submit-paper">
-          <button style={buttonStyle}>Register Paper</button>
+          <button style={buttonStyle}>Register paper</button>
         </Link>
         <Link href="/submit-project">
-          <button style={buttonStyle}>Register Project</button>
+          <button style={buttonStyle}>Register project</button>
         </Link>
       </nav>
 
