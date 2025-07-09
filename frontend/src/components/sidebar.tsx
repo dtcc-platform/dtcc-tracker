@@ -6,7 +6,7 @@ import { Paper, Project } from '@/app/types/FixedTypes'
 import { deleteProject, deletePaper } from '@/app/utils/api'
 import { useRefresh } from '../app/hooks/RefreshContext'
 import { useAuth } from '@/app/hooks/AuthContext'
-
+import { useRouter } from 'next/navigation'
 interface SidebarProps {
   papers: Paper[]
   projects: Project[]
@@ -17,6 +17,7 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
   const [deleteType, setDeleteType] = useState<'papers' | 'projects' | null>(null)
+  const router = useRouter()
   const {triggerRefresh} = useRefresh()
   const toggleSection = (section: 'papers' | 'projects') => {
     setExpandedSection(expandedSection === section ? null : section)
@@ -38,9 +39,11 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
     if (deleteIndex === null || deleteType === null) return
     try {
       if (deleteType === "projects"){
+        router.push('/')
         await deleteProject(projects[deleteIndex].id!)
       }
       if (deleteType === "papers"){
+        router.push('/')
         await deletePaper(papers[deleteIndex].id!)
       }
 

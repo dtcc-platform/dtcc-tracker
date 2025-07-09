@@ -7,6 +7,7 @@ interface DropdownProps {
   value: string
   onChange: (value: string) => void
   placeholder?: string  // Optional prop for custom placeholder text
+  required?: boolean    // Optional prop for required validation
 }
 
 const Dropdown: React.FC<DropdownProps> = ({
@@ -14,10 +15,16 @@ const Dropdown: React.FC<DropdownProps> = ({
   value,
   onChange,
   placeholder = 'Select an option',  // Default placeholder if none is provided
+  required = false,  // Default to false if not provided
 }) => {
   return (
     <div style={dropdownStyle}>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
+      <select 
+        value={value} 
+        onChange={(e) => onChange(e.target.value)} 
+        style={selectStyle}
+        required={required}
+      >
         <option value="" disabled>
           {placeholder}
         </option>
