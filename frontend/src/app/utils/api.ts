@@ -113,7 +113,21 @@ export const updateProject = async (id: number, project: Partial<Project>) => {
 
   return data;
 }
+export const fetchSuperUserPaper = async (): Promise<Paper[]> => {
+  try {
+    const response = await fetchWithAuth(`/api/reporting`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch papers');
+    }
+    const data = await response.json();
 
+    // Assuming the API returns snake_case keys, convert them to camelCase
+    return convertKeysToCamelCase(data) as Paper[];
+  } catch (error) {
+    console.error('Error fetching papers:', error);
+    return [];
+  }
+};
 export const fetchPaper = async (): Promise<Paper[]> => {
   try {
     const response = await fetchWithAuth(`${PAPER_API}`);

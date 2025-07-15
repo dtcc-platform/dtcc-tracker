@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import IntegrityError
 from .models import Paper, Project, ChatMessage
-from .serializers import PaperSerializer, ProjectSerializer, CustomTokenVerifySerializer, UserSerializer
+from .serializers import PaperSerializer, ProjectSerializer, CustomTokenVerifySerializer, SuperuserPaperSerializer, UserSerializer
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
@@ -431,32 +431,247 @@ class PaperListCreateView(APIView):
 
     def get(self, request):
         """
-        If superuser, fetch all projects;
-        otherwise fetch only projects belonging to this user.
+        Regular users see only their own papers (excluding master copies)
+        Superusers see their master copies for deduplication
         """
         if request.user.is_superuser:
-            papers = Paper.objects.all()
+            papers = Paper.objects.filter(user=request.user, is_master_copy=True)
         else:
-            papers = Paper.objects.filter(user=request.user)
+            papers = Paper.objects.filter(user=request.user, is_master_copy=False)
+        
         serializer = PaperSerializer(papers, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        """Create a new paper and associate it with the authenticated user."""
-        serializer = PaperSerializer(data=request.data, context={'request': request})  # Pass request context
+        """
+        Create a new paper. 
+        - Regular users: creates normal paper + auto-copies to superuser
+        - Superusers: creates master copy directly
+        """
+        serializer = PaperSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             try:
-                serializer.save(user=request.user)  # Assign user automatically
+                paper = serializer.save(user=request.user)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except IntegrityError:
+            except IntegrityError as e:
+                # Handle duplicate DOI
+                if request.user.is_superuser:
+                    # Check if superuser already has this DOI as master copy
+                    if Paper.objects.filter(doi=request.data.get('doi'), user=request.user, is_master_copy=True).exists():
+                        return Response(
+                            {"error": "You already have this paper as a master copy", "field": "doi"},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                
                 return Response(
                     {"error": "Duplicate DOI error", "field": "doi"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+        
         errors = serializer.errors.copy()
         if 'non_field_errors' in errors:
-            errors['error'] = 'Duplicate key error'  # use the first error message
+            errors['error'] = 'Duplicate key error'
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SuperuserPaperUpdateView(APIView):
+    """
+    Superuser can update submission year for papers
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def put(self, request, pk):
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "Only superusers can update submission status"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get the master copy
+        paper = get_object_or_404(Paper, pk=pk, user=request.user, is_master_copy=True)
+        
+        serializer = SuperuserPaperSerializer(paper, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SuperuserBulkUpdateView(APIView):
+    """
+    Bulk update submission year for multiple papers
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "Only superusers can bulk update papers"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        paper_ids = request.data.get('paper_ids', [])
+        submission_year = request.data.get('submission_year')  # Can be None to unsubmit
+        
+        if not paper_ids:
+            return Response(
+                {"error": "paper_ids is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get master copies belonging to this superuser
+        papers = Paper.objects.filter(
+            id__in=paper_ids, 
+            user=request.user, 
+            is_master_copy=True
+        )
+        
+        updated_count = 0
+        
+        for paper in papers:
+            # Update all papers with the same DOI
+            Paper.objects.filter(doi=paper.doi).update(
+                submission_year=submission_year
+            )
+            updated_count += Paper.objects.filter(doi=paper.doi).count()
+        
+        action = "submitted" if submission_year else "unsubmitted"
+        message = f"Successfully {action} {updated_count} papers"
+        if submission_year:
+            message += f" for year {submission_year}"
+        
+        return Response({
+            "message": message,
+            "updated_papers": updated_count
+        }, status=status.HTTP_200_OK)
+
+# Update your existing PaperListCreateView post method
+class PaperListCreateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """
+        Regular users see only their own papers (excluding master copies)
+        Superusers see their master copies
+        """
+        print(f"DEBUG: GET request from user: {request.user.username}, is_superuser: {request.user.is_superuser}")
+        
+        if request.user.is_superuser:
+            papers = Paper.objects.filter(user=request.user, is_master_copy=True)
+            print(f"DEBUG: Superuser query - found {papers.count()} master copies")
+        else:
+            papers = Paper.objects.filter(user=request.user, is_master_copy=False)
+            print(f"DEBUG: Regular user query - found {papers.count()} non-master papers")
+        
+        # Let's also show what papers exist for this user
+        all_user_papers = Paper.objects.filter(user=request.user)
+        print(f"DEBUG: All papers for user {request.user.username}: {all_user_papers.count()}")
+        for p in all_user_papers:
+            print(f"DEBUG: Paper ID: {p.id}, DOI: {p.doi}, is_master_copy: {p.is_master_copy}")
+        
+        serializer = PaperSerializer(papers, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        """Create a new paper and auto-copy to superuser."""
+        print(f"DEBUG: POST request received from user: {request.user.username}")
+        print(f"DEBUG: Request data: {request.data}")
+        
+        serializer = PaperSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            print("DEBUG: Serializer is valid")
+            try:
+                # Remove the explicit is_master_copy parameter - let the serializer handle it
+                paper = serializer.save(user=request.user)
+                print(f"DEBUG: Paper saved successfully: {paper.id}")
+                
+                # Let's also check what papers exist after creation
+                all_papers = Paper.objects.all()
+                print(f"DEBUG: Total papers in database: {all_papers.count()}")
+                for p in all_papers:
+                    print(f"DEBUG: Paper ID: {p.id}, DOI: {p.doi}, User: {p.user.username}, is_master_copy: {p.is_master_copy}")
+                
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            except IntegrityError as e:
+                print(f"DEBUG: IntegrityError occurred: {e}")
+                return Response(
+                    {"error": "Duplicate DOI error", "field": "doi"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            print(f"DEBUG: Serializer is invalid: {serializer.errors}")
+            
+        errors = serializer.errors.copy()
+        print(errors)
+        if 'non_field_errors' in errors:
+            errors['error'] = 'Duplicate key error'
+        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SuperuserPaperListView(APIView):
+    """
+    Superuser sees only their master copies (deduplicated view)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "Only superusers can access this endpoint"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get only master copies belonging to this superuser
+        papers = Paper.objects.filter(user=request.user)
+        
+        # Optional filters
+        submission_year = request.query_params.get('submission_year')
+        submitted_only = request.query_params.get('submitted_only')
+        
+        if submission_year:
+            papers = papers.filter(submission_year=submission_year)
+        elif submitted_only == 'true':
+            papers = papers.filter(submission_year__isnull=False)
+        elif submitted_only == 'false':
+            papers = papers.filter(submission_year__isnull=True)
+        
+        serializer = SuperuserPaperSerializer(papers, many=True, context={'request': request})
+        return Response(serializer.data)
+
+class SuperuserSubmissionStatsView(APIView):
+    """
+    Get submission statistics
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response(
+                {"error": "Only superusers can access this endpoint"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Only look at master copies
+        master_papers = Paper.objects.filter(user=request.user, is_master_copy=True)
+        
+        stats = {
+            'total_papers': master_papers.count(),
+            'submitted_papers': master_papers.filter(submission_year__isnull=False).count(),
+            'not_submitted_papers': master_papers.filter(submission_year__isnull=True).count(),
+            'by_year': {}
+        }
+        
+        # Group by submission year
+        from django.db.models import Count
+        yearly_stats = master_papers.filter(
+            submission_year__isnull=False
+        ).values('submission_year').annotate(
+            count=Count('id')
+        ).order_by('submission_year')
+        
+        for item in yearly_stats:
+            year = item['submission_year']
+            stats['by_year'][year] = item['count']
+        
+        return Response(stats)
 
 class PaperDeleteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -570,6 +785,7 @@ class ProjectUpdateView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 def fetch_doi_metadata(doi):

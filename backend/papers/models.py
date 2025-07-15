@@ -11,6 +11,7 @@ class Project(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     amount = models.CharField(max_length=255, default="0")
 
+
     class Meta:
         unique_together = ('user', 'project_name')
     def __str__(self):
@@ -25,6 +26,9 @@ class Paper(models.Model):
     additional_authors = models.JSONField(default=list)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     publication_type = models.CharField(max_length=255, default="")
+    submission_year = models.IntegerField(null=True, blank=True)
+
+    is_master_copy = models.BooleanField(default=False) 
 
     class Meta: 
         unique_together = ('user', 'doi')

@@ -18,17 +18,17 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
   const [deleteType, setDeleteType] = useState<'papers' | 'projects' | null>(null)
   const router = useRouter()
-  const {triggerRefresh} = useRefresh()
+  const { triggerRefresh } = useRefresh()
   const toggleSection = (section: 'papers' | 'projects') => {
     setExpandedSection(expandedSection === section ? null : section)
   }
-  const {user, isSuperUser} = useAuth()
+  const { user, isSuperUser } = useAuth()
   const openConfirmation = (index: number, type: 'papers' | 'projects') => {
     setDeleteIndex(index)
     setDeleteType(type)
     setShowConfirm(true)
   }
-  console.log('super user check',isSuperUser)
+  console.log('super user check', isSuperUser)
   const closeConfirmation = () => {
     setShowConfirm(false)
     setDeleteIndex(null)
@@ -38,11 +38,11 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
   const handleDelete = async () => {
     if (deleteIndex === null || deleteType === null) return
     try {
-      if (deleteType === "projects"){
+      if (deleteType === "projects") {
         router.push('/')
         await deleteProject(projects[deleteIndex].id!)
       }
-      if (deleteType === "papers"){
+      if (deleteType === "papers") {
         router.push('/')
         await deletePaper(papers[deleteIndex].id!)
       }
@@ -56,7 +56,7 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
 
   return (
     <div style={sidebarContainerStyle}>
-      <div style={{ height: '64px',display: 'flex', justifyContent: 'center', alignItems: 'center' }}>Welcome, {user}</div>  
+      <div style={{ height: '64px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>Welcome, {user}</div>
 
       <nav style={navStyle}>
         <Link href="/submit-paper">
@@ -71,7 +71,12 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
       <div style={expandableContainerStyle}>
         {isSuperUser && <button style={expandableButtonStyle} onClick={() => window.location.href = '/admin'}>
           Users
-          </button>}
+        </button>}
+      </div>
+      <div style={expandableContainerStyle}>
+        {isSuperUser && <button style={expandableButtonStyle} onClick={() => window.location.href = '/reporting'}>
+          Reporting
+        </button>}
       </div>
       {/* Expandable Papers Section */}
       <div style={expandableContainerStyle}>
@@ -83,26 +88,26 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
             {papers && papers.length > 0 ? (
               papers.map((paper, index) => (
                 <div key={index} style={paperItemStyle}>
-            <div style={titleContainerStyle}>
-              <Link href={`/?paperIndex=${index}`} style={titleStyle}>
-              {isSuperUser && paper.submittedBy
-                ? `${paper.submittedBy}/${paper.title}`
-                : paper.title
-              }
-              </Link>
-              <div style={iconContainerStyle}>
-                <Link href={`/edit-paper/${index}`} style={iconButtonStyle}>
-                  <PencilIcon />
-                </Link>
-                <button
-                  style={iconButtonStyle}
-                  onClick={() => openConfirmation(index, 'papers')}
-                >
-                  <TrashIcon />
-                </button>
-              </div>
-            </div>
-          </div>
+                  <div style={titleContainerStyle}>
+                    <Link href={`/?paperIndex=${index}`} style={titleStyle}>
+                      {isSuperUser && paper.submittedBy
+                        ? `${paper.submittedBy}/${paper.title}`
+                        : paper.title
+                      }
+                    </Link>
+                    <div style={iconContainerStyle}>
+                      <Link href={`/edit-paper/${index}`} style={iconButtonStyle}>
+                        <PencilIcon />
+                      </Link>
+                      <button
+                        style={iconButtonStyle}
+                        onClick={() => openConfirmation(index, 'papers')}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ))
             ) : (
               <p style={{ fontStyle: 'italic' }}>No papers yet.</p>
@@ -112,43 +117,43 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
       </div>
 
       {/* Expandable Projects Section */}
-{/* Expandable Projects Section */}
-<div style={expandableContainerStyle}>
-  <button style={expandableButtonStyle} onClick={() => toggleSection('projects')}>
-    Projects
-  </button>
-  {expandedSection === 'projects' && (
-    <div style={scrollableContentStyle}>
-      {projects && projects.length > 0 ? (
-        projects.map((project, index) => (
-          <div key={index} style={paperItemStyle}>
-            <div style={titleContainerStyle}>
-              <Link href={`/?projectIndex=${index}`} style={titleStyle}>
-              {isSuperUser && project.submittedBy
-                ? `${project.submittedBy}/${project.projectName}`
-                : project.projectName
-              }
-              </Link>
-              <div style={iconContainerStyle}>
-                <Link href={`/edit-project/${index}`} style={iconButtonStyle}>
-                  <PencilIcon />
-                </Link>
-                <button
-                  style={iconButtonStyle}
-                  onClick={() => openConfirmation(index, 'projects')}
-                >
-                  <TrashIcon />
-                </button>
-              </div>
-            </div>
+      {/* Expandable Projects Section */}
+      <div style={expandableContainerStyle}>
+        <button style={expandableButtonStyle} onClick={() => toggleSection('projects')}>
+          Projects
+        </button>
+        {expandedSection === 'projects' && (
+          <div style={scrollableContentStyle}>
+            {projects && projects.length > 0 ? (
+              projects.map((project, index) => (
+                <div key={index} style={paperItemStyle}>
+                  <div style={titleContainerStyle}>
+                    <Link href={`/?projectIndex=${index}`} style={titleStyle}>
+                      {isSuperUser && project.submittedBy
+                        ? `${project.submittedBy}/${project.projectName}`
+                        : project.projectName
+                      }
+                    </Link>
+                    <div style={iconContainerStyle}>
+                      <Link href={`/edit-project/${index}`} style={iconButtonStyle}>
+                        <PencilIcon />
+                      </Link>
+                      <button
+                        style={iconButtonStyle}
+                        onClick={() => openConfirmation(index, 'projects')}
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p style={{ fontStyle: 'italic' }}>No projects yet.</p>
+            )}
           </div>
-        ))
-      ) : (
-        <p style={{ fontStyle: 'italic' }}>No projects yet.</p>
-      )}
-    </div>
-  )}
-</div>
+        )}
+      </div>
 
 
 
@@ -170,11 +175,11 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
 
 // Icon Components
 function PencilIcon() {
-  return <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16.862 3.487a2.754 2.754 0 1 1 3.892 3.895L7.825 20.31 3 21l.69-4.83 13.172-12.683Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  return <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M16.862 3.487a2.754 2.754 0 1 1 3.892 3.895L7.825 20.31 3 21l.69-4.83 13.172-12.683Z" strokeLinecap="round" strokeLinejoin="round" /></svg>
 }
 
 function TrashIcon() {
-  return <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18" strokeLinecap="round" strokeLinejoin="round"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12Z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+  return <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18" strokeLinecap="round" strokeLinejoin="round" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12Z" strokeLinecap="round" strokeLinejoin="round" /></svg>
 }
 
 const paperItemStyle: React.CSSProperties = {

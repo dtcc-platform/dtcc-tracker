@@ -24,4 +24,11 @@ urlpatterns = [
     path('chat/', ChatbotView.as_view(), name='chat_placeholder'),
     path("clear_chat_history/", ClearChatHistory.as_view(), name="clear_history"),
 
+    # Superuser paper management
+    path('superuser/papers/', SuperuserPaperListView.as_view(), name='superuser-papers'),
+    path('superuser/papers/<int:pk>/', SuperuserPaperUpdateView.as_view(), name='superuser-paper-update'),
+    path('superuser/papers/bulk-update/', SuperuserBulkUpdateView.as_view(), name='superuser-bulk-update'),
+    path('superuser/papers/stats/', SuperuserSubmissionStatsView.as_view(), name='superuser-stats'),
+
+
 ]
