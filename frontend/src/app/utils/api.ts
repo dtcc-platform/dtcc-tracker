@@ -311,3 +311,21 @@ export async function ClearChat() {
   const data = await response.json();
   return data.response
 }
+
+export const updateYear = async (id: number, year: number) => {
+  const response = await fetchWithAuth(`/api/reporting/${id}`, {
+      method: "PUT",
+      headers: {
+          "Content-Type": "application/json",
+      },
+      body: JSON.stringify(year),
+  });
+  const data = await response.json()
+
+  if (!response.ok) {
+    console.error(data.error);
+    throw new Error(data.error || "An error occurred while updating the project");
+  }
+
+  return data;
+}

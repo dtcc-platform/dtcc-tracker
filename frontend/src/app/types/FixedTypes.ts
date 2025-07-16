@@ -20,8 +20,7 @@ export interface Paper{
   additionalAuthors: string[]
   submittedBy? : string
   publicationType: string
-  
-
+  submissionYear?: number
 }
 export interface User {
   id: number;

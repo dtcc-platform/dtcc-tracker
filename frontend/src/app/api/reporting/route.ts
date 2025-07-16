@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `${authHeader}`, // Use stored token
+      "Authorization": `${authHeader}`, 
     },
   });
   const papers = await response.json();
