@@ -17,6 +17,7 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
   const [showConfirm, setShowConfirm] = useState(false)
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null)
   const [deleteType, setDeleteType] = useState<'papers' | 'projects' | null>(null)
+  const [reporting, setReporting] = useState(false)
   const router = useRouter()
   const { triggerRefresh } = useRefresh()
   const toggleSection = (section: 'papers' | 'projects') => {
@@ -68,16 +69,6 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
       </nav>
 
       <hr style={{ margin: '1rem 0' }} />
-      <div style={expandableContainerStyle}>
-        {isSuperUser && <button style={expandableButtonStyle} onClick={() => window.location.href = '/admin'}>
-          Users
-        </button>}
-      </div>
-      <div style={expandableContainerStyle}>
-        {isSuperUser && <button style={expandableButtonStyle} onClick={() => window.location.href = '/reporting'}>
-          Reporting
-        </button>}
-      </div>
       {/* Expandable Papers Section */}
       <div style={expandableContainerStyle}>
         <button style={expandableButtonStyle} onClick={() => toggleSection('papers')}>
@@ -117,7 +108,6 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
       </div>
 
       {/* Expandable Projects Section */}
-      {/* Expandable Projects Section */}
       <div style={expandableContainerStyle}>
         <button style={expandableButtonStyle} onClick={() => toggleSection('projects')}>
           Projects
@@ -152,6 +142,44 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
               <p style={{ fontStyle: 'italic' }}>No projects yet.</p>
             )}
           </div>
+        )}
+      </div>
+
+      <hr style={{ margin: '1rem 0' }} />
+
+      <div style={expandableContainerStyle}>
+        {isSuperUser && <button style={expandableButtonStyle} onClick={() => window.location.href = '/admin'}>
+          Users
+        </button>}
+      </div>
+      <div style={expandableContainerStyle}>
+        {isSuperUser && <button style={expandableButtonStyle}
+          onClick={() => setReporting(!reporting)}
+        >
+          Reporting
+        </button>}
+        {reporting && (
+          <div style={scrollableContentStyle}>
+            <div style={paperItemStyle}>
+              <div style={titleContainerStyle}>
+                <Link href={`/reporting-papers`} style={titleStyle}>
+                  Papers
+                </Link>
+                <div style={iconContainerStyle}>
+                </div>
+              </div>
+            </div>
+            <div style={paperItemStyle}>
+              <div style={titleContainerStyle}>
+                <Link href={`/reporting-projects`} style={titleStyle}>
+                  Projects
+                </Link>
+                <div style={iconContainerStyle}>
+                </div>
+              </div>
+            </div>
+          </div>
+
         )}
       </div>
 
