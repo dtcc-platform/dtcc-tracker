@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import ProjectForm from '@/components/ProjectForm'
 import { Project } from '../types/FixedTypes'
 import { createProject } from '../utils/api'
-import { useRefresh } from '@/app/hooks/RefreshContext'
+import { useRefresh } from '@/app/contexts/RefreshContext'
 
 export default function SubmitPaper1Page() {
   const { triggerRefresh } = useRefresh();

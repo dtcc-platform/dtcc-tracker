@@ -5,8 +5,8 @@ import chalmers_logo from '../../public/chalmers-logo.png'
 import Link from "next/link";
 import Sidebar from "./sidebar";
 import newLogo from '../../public/dtcc-logo-new.png'
-import { useRefresh } from "../app/hooks/RefreshContext";
-import { useAuth } from "@/app/hooks/AuthContext";
+import { useRefresh } from "../app/contexts/RefreshContext";
+import { useAuth } from "@/app/contexts/AuthContext";
 
 const Header: React.FC = () => {
   const HEADER_HEIGHT = 64; // Height of the header in pixels

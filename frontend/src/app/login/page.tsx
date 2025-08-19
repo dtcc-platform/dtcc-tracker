@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { useAuth } from "../hooks/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import styles from "./Login.module.css";
 import Image from "next/image";
 import newLogo from "../../../public/dtcc-logo-new.png";
-import {useRefresh} from "../hooks/RefreshContext";
+import {useRefresh} from "../contexts/RefreshContext";
 import { BASE_URL } from "../types/FixedTypes";
 const LoginPage: React.FC = () => {
   const router = useRouter();

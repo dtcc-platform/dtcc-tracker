@@ -3,9 +3,37 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPaper, fetchDoiMetadata } from '../utils/api';
 import { Paper } from '../types/FixedTypes';
-import { useRefresh } from '@/app/hooks/RefreshContext';
+import { useRefresh } from '@/app/contexts/RefreshContext';
 import PaperForm from '@/components/PaperForm';
+import { usePaperContext } from '../contexts/PaperContext';
+const formatDateToYYYYMMDD = (dateString: string): string => {
+    if (!dateString) return '';
 
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+        const yyyymmddPattern = /^\d{4}-\d{2}-\d{2}$/;
+        if (yyyymmddPattern.test(dateString)) {
+            return dateString;
+        }
+        const ddmmyyyySlashPattern = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+        const ddmmyyyyMatch = dateString.match(ddmmyyyySlashPattern);
+        if (ddmmyyyyMatch) {
+            return `${ddmmyyyyMatch[3]}-${ddmmyyyyMatch[2]}-${ddmmyyyyMatch[1]}`;
+        }
+        const ddmmyyyyDashPattern = /^(\d{2})-(\d{2})-(\d{4})$/;
+        const ddmmyyyyDashMatch = dateString.match(ddmmyyyyDashPattern);
+        if (ddmmyyyyDashMatch) {
+            return `${ddmmyyyyDashMatch[3]}-${ddmmyyyyDashMatch[2]}-${ddmmyyyyDashMatch[1]}`;
+        }
+        return dateString;
+    }
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${year}-${month}-${day}`;
+};
 
 const InputPage: React.FC = () => {
     const [manualInput, setManualInput] = useState(false);
@@ -19,10 +47,10 @@ const InputPage: React.FC = () => {
         additionalAuthors: [],
         publicationType: ''
     });
-    const [additionalAuthors, setAdditionalAuthors] = useState<string[]>([]);
     const { triggerRefresh } = useRefresh();
     const router = useRouter();
-
+    const { setDoiErrors, setPapers, clearEverything } = usePaperContext();
+    const [userDOIInput, setUserDOIInput] = useState('');
     const handleChange = (key: keyof Paper, value: string | string[]) => {
         setPaper((prev) => ({ ...prev, [key]: value }));
         setError(null); // Clear error when user starts typing
@@ -59,23 +87,149 @@ const InputPage: React.FC = () => {
         }
     };
 
-    const handleRetrieve = async () => {
-        const data = await fetchDoiMetadata(paper.doi);
-        if (data) {
-            const queryString = new URLSearchParams({
-                journal: data.Journal || '',
-                doi: data.DOI || '',
-                title: data.Title || '',
-                authors: JSON.stringify(data.Authors) || '',
-                publishedOn: data.PublishedOn || '',
-                publisher: data.Publisher || '',
-                publicationType: data.PublicationType || '',
-            }).toString();
-            console.log(data);
-            router.push(`/result?${queryString}`);
-        } else {
-            console.error('Failed to retrieve DOI metadata.');
+    const handleSubmit = () => {
+        clearEverything();
+        const splitDOIs = userDOIInput
+            .split("\n")
+            .map((doi) => doi.trim())
+            .filter((doi) => doi.length > 0);
+
+        const uniqueDOIs = [...new Set(splitDOIs)];
+        if(uniqueDOIs.length === 0) {
+            return
         }
+        if (uniqueDOIs.length > 1) {
+            handleRetrieveMultiple(uniqueDOIs);
+        } else {
+            handleRetrieve(uniqueDOIs[0]);
+        }
+    }
+
+    const handleRetrieve = async (doi: string) => {
+        try {
+            const data = await fetchDoiMetadata(doi);
+            if (data) {
+                // Format the date
+                const formattedDate = formatDateToYYYYMMDD(data.PublishedOn || '');
+
+                const paperData: Paper = {
+                    authorName: data.Authors?.["Main Author"] || '',
+                    doi: data.DOI || '',
+                    journal: data.Journal || '',
+                    date: formattedDate,
+                    title: data.Title || '',
+                    additionalAuthors: data.Authors?.["Additional Authors"] || [],
+                    publicationType: data.PublicationType || '',
+                };
+
+                setPapers([paperData]);
+                router.push('/result');
+            } else {
+                // Handle case where DOI metadata couldn't be retrieved
+                const failedPaper: Paper = {
+                    authorName: '',
+                    doi: doi,
+                    journal: '',
+                    date: '',
+                    title: '',
+                    additionalAuthors: [],
+                    publicationType: '',
+                };
+
+                setPapers([failedPaper]);
+                setDoiErrors([`Failed to load metadata for DOI: ${doi}`]);
+                router.push('/result');
+            }
+        } catch (error) {
+            console.error('Error retrieving DOI metadata:', error);
+
+            // Create a paper with just the DOI so user can edit manually
+            const failedPaper: Paper = {
+                authorName: '',
+                doi: doi,
+                journal: '',
+                date: '',
+                title: '',
+                additionalAuthors: [],
+                publicationType: '',
+            };
+
+            setPapers([failedPaper]);
+            setDoiErrors([`Failed to load metadata for DOI: ${doi}`]);
+            router.push('/result');
+        }
+    };
+
+    const handleRetrieveMultiple = async (dois: string[]) => {
+        const failedDois: string[] = [];
+        const validPapers: Paper[] = [];
+
+        // Process each DOI individually to catch failures
+        for (const doi of dois) {
+            try {
+                const data = await fetchDoiMetadata(doi);
+                if (data) {
+                    const paperData: Paper = {
+                        authorName: data.Authors?.["Main Author"] || '',
+                        doi: data.DOI || '',
+                        journal: data.Journal || '',
+                        date: formatDateToYYYYMMDD(data.PublishedOn || ''),
+                        title: data.Title || '',
+                        additionalAuthors: data.Authors?.["Additional Authors"] || [],
+                        publicationType: data.PublicationType || '',
+                    };
+                    validPapers.push(paperData);
+                } else {
+                    // Metadata retrieval failed, but we still want to include the DOI
+                    const failedPaper: Paper = {
+                        authorName: '',
+                        doi: doi,
+                        journal: '',
+                        date: '',
+                        title: '',
+                        additionalAuthors: [],
+                        publicationType: '',
+                    };
+                    validPapers.push(failedPaper);
+                    failedDois.push(doi);
+                }
+            } catch (error) {
+                console.error(`Error retrieving metadata for DOI ${doi}:`, error);
+
+                // Include the failed DOI as an empty paper for manual editing
+                const failedPaper: Paper = {
+                    authorName: '',
+                    doi: doi,
+                    journal: '',
+                    date: '',
+                    title: '',
+                    additionalAuthors: [],
+                    publicationType: '',
+                };
+                validPapers.push(failedPaper);
+                failedDois.push(doi);
+            }
+        }
+
+        // Always navigate to results page, even if some/all failed
+        if (validPapers.length > 0) {
+            setPapers(validPapers);
+            console.log("VALID PAPERS",validPapers)
+            console.log("FAILED DOIS",failedDois)
+            // Set error messages for failed DOIs
+            if (failedDois.length > 0) {
+                const errorMessages = failedDois.map(doi => `Failed to load metadata for DOI: ${doi}`);
+                setDoiErrors(errorMessages);
+            } else {
+                setDoiErrors([]); // Clear any previous errors
+            }
+
+            
+        } else {
+            console.error('No valid papers could be processed');
+            setDoiErrors(['Failed to process any of the provided DOIs']);
+        }
+        router.push('/result');
     };
 
     return (
@@ -126,13 +280,13 @@ const InputPage: React.FC = () => {
                     </p>
                 )}
 
-                <input
-                    type="text"
-                    placeholder="Enter DOI"
+                <textarea
+                    placeholder="Enter one DOI per line"
                     name="doi"
-                    value={paper.doi}
-                    onChange={(e) => handleChange('doi', e.target.value)}
+                    value={userDOIInput}
+                    onChange={(e) => setUserDOIInput(e.target.value)}
                     style={{
+                        height: '250px',
                         display: 'block',
                         width: '100%',
                         marginBottom: '10px',
@@ -176,7 +330,7 @@ const InputPage: React.FC = () => {
                         Manual Input
                     </button>
                     <button
-                        onClick={handleRetrieve}
+                        onClick={handleSubmit}
                         style={{
                             padding: '8px 12px',
                             backgroundColor: '#2ecc71',

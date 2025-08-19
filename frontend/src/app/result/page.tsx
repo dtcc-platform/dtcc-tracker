@@ -1,19 +1,19 @@
+// Updated ResultPage component with fixed Save All functionality
 'use client';
 
 import React, { useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import PaperForm from '@/components/PaperForm';
 import { Paper } from '../types/FixedTypes';
 import { useRouter } from 'next/navigation';
 import { createPaper } from '../utils/api';
-import { useRefresh } from '../hooks/RefreshContext';
+import { useRefresh } from '../contexts/RefreshContext';
+import { usePaperContext } from '../contexts/PaperContext';
 
-// Function to format date to yyyy-mm-dd
 const formatDateToYYYYMMDD = (dateString: string): string => {
     if (!dateString) return '';
     
     const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
+    if (isNaN(date.getTime())) {
         const yyyymmddPattern = /^\d{4}-\d{2}-\d{2}$/;
         if (yyyymmddPattern.test(dateString)) {
             return dateString;
@@ -39,93 +39,260 @@ const formatDateToYYYYMMDD = (dateString: string): string => {
 };
 
 const ResultPage: React.FC = () => {
-    const searchParams = useSearchParams();
-    const {triggerRefresh} = useRefresh()
-    const router = useRouter()
-    const [error, setError] = useState<string | null>(null); // New state for error message
-    let parsedAuthors: { "Main Author": string; "Additional Authors": string[] } = 
-        { "Main Author": '', "Additional Authors": [] };
+    const { papers, updatePaper, removePaper, doiErrors, setDoiErrors } = usePaperContext();
+    const { triggerRefresh } = useRefresh();
+    const router = useRouter();
+    const [errors, setErrors] = useState<{ [key: number]: string }>({});
+    const [savingStates, setSavingStates] = useState<{ [key: number]: boolean }>({});
+    const [isSavingAll, setIsSavingAll] = useState(false);
 
-    try {
-        const authorsInput = searchParams.get('authors');
-        parsedAuthors = authorsInput ? JSON.parse(authorsInput) : { "Main Author": '', "Additional Authors": [] };
-    } catch (error) {
-        console.error('Failed to parse authors:', error);
-    }
+    const handleChange = (paperIndex: number, key: keyof Paper, value: string | string[]) => {
+        const currentPaper = papers[paperIndex];
+        if (!currentPaper) return;
 
-    // Format the date when initializing the state
-    const originalDate = searchParams.get('publishedOn') || '';
-    const formattedDate = formatDateToYYYYMMDD(originalDate);
-
-    const [retrievedPaper, setRetrievedPaper] = useState<Paper>({
-        authorName: parsedAuthors["Main Author"] || '',
-        doi: searchParams.get('doi') || '',
-        journal: searchParams.get('journal') || '',
-        date: formattedDate,
-        title: searchParams.get('title') || '',
-        additionalAuthors: parsedAuthors["Additional Authors"],
-        publicationType: searchParams.get('publicationType') || '',
-    })
-    
-    console.log(retrievedPaper)
-    console.log('Original date:', originalDate)
-    console.log('Formatted date:', retrievedPaper.date)
-    
-    const handleChange = (key: keyof Paper, value: string | string[]) => {
         // If changing the date, format it
         if (key === 'date' && typeof value === 'string') {
             value = formatDateToYYYYMMDD(value);
         }
-        setRetrievedPaper((prev) => ({ ...prev, [key]: value }))
-    }
 
-    const handleSave = async () => {
+        const updatedPaper = { ...currentPaper, [key]: value };
+        updatePaper(paperIndex, updatedPaper);
+    };
+
+    const handleSave = async (paperIndex: number) => {
+        const paperToSave = papers[paperIndex];
+        if (!paperToSave) return;
+
+        setSavingStates(prev => ({ ...prev, [paperIndex]: true }));
+        setErrors(prev => ({ ...prev, [paperIndex]: '' }));
+
         try {
-            const response = await createPaper(retrievedPaper);
-            console.log(response)
+            const response = await createPaper(paperToSave);
+            console.log(response);
             if (response.error) {
-                if (response.error === ("DOI already exists")) {
-                    setError("This DOI already exists."); 
+                if (response.error === "DOI already exists") {
+                    setErrors(prev => ({ ...prev, [paperIndex]: "This DOI already exists." }));
+                } else {
+                    setErrors(prev => ({ ...prev, [paperIndex]: response.error }));
                 }
+                return false; // Return false to indicate failure
             } else {
+                removePaper(paperIndex);
                 triggerRefresh();
-                router.push('/');
+                
+                if (papers.length === 1) { // Check if this was the last paper
+                    router.push('/');
+                }
+                return true; // Return true to indicate success
             }
         } catch (error) {
             console.error('Error saving paper:', error);
-            setError('An error occurred while saving.'); 
+            setErrors(prev => ({ ...prev, [paperIndex]: 'An error occurred while saving.' }));
+            return false;
+        } finally {
+            setSavingStates(prev => ({ ...prev, [paperIndex]: false }));
         }
     };
-    
+
+    const handleRemove = (paperIndex: number) => {
+        removePaper(paperIndex);
+        if (papers.length === 1) { // Check if this was the last paper
+            router.push('/');
+        }
+    };
+
     const handleBack = () => {
         router.back();
     };
 
+    const handleSaveAll = async () => {
+        setIsSavingAll(true);
+        setErrors({}); // Clear all errors
+        
+        try {
+            // Save all papers sequentially to avoid index conflicts
+            const saveResults = [];
+            for (let i = 0; i < papers.length; i++) {
+                const paperToSave = papers[i];
+                if (!paperToSave) continue;
+
+                setSavingStates(prev => ({ ...prev, [i]: true }));
+                
+                try {
+                    const response = await createPaper(paperToSave);
+                    if (response.error) {
+                        if (response.error === "DOI already exists") {
+                            setErrors(prev => ({ ...prev, [i]: "This DOI already exists." }));
+                        } else {
+                            setErrors(prev => ({ ...prev, [i]: response.error }));
+                        }
+                        saveResults.push(false);
+                    } else {
+                        saveResults.push(true);
+                    }
+                } catch (error) {
+                    console.error('Error saving paper:', error);
+                    setErrors(prev => ({ ...prev, [i]: 'An error occurred while saving.' }));
+                    saveResults.push(false);
+                } finally {
+                    setSavingStates(prev => ({ ...prev, [i]: false }));
+                }
+            }
+
+            // Remove all successfully saved papers at once
+            // We need to remove from the end to avoid index shifting issues
+            const successfulIndices = saveResults.map((success, index) => success ? index : -1).filter(index => index !== -1);
+            successfulIndices.reverse().forEach(index => {
+                removePaper(index);
+            });
+
+            // If all papers were saved successfully, redirect to home
+            if (saveResults.every(result => result === true)) {
+                triggerRefresh();
+                router.push('/');
+            } else {
+                // If some papers failed, just refresh the data for the remaining papers
+                triggerRefresh();
+            }
+            
+        } catch (error) {
+            console.error('Error in save all:', error);
+        } finally {
+            setIsSavingAll(false);
+        }
+    };
+
+    if (papers.length === 0) {
+        return (
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+                <p>No papers to display.</p>
+                <button onClick={handleBack}>Go Back</button>
+            </div>
+        );
+    }
+
     return (
-        <div>
-        {error && (
-            <p style={{ color: 'red', textAlign: 'center', marginBottom: '10px' }}>
-                {error}
-            </p>
-        )}
-        <PaperForm
-            authorName={retrievedPaper.authorName}
-            setAuthorName={(value) => handleChange('authorName', value)}
-            doi={retrievedPaper.doi}
-            setDoi={(value) => handleChange('doi', value)}
-            title={retrievedPaper.title}
-            setTitle={(value) => handleChange('title', value)}
-            journal={retrievedPaper.journal}
-            setJournal={(value) => handleChange('journal', value)}
-            date={retrievedPaper.date}
-            setDate={(value) => handleChange('date', value)}
-            publicationType={retrievedPaper.publicationType}
-            setPublicationType={(value) => handleChange('publicationType', value)}
-            additionalAuthors={retrievedPaper.additionalAuthors}
-            setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
-            onSave={handleSave}
-            onBack={handleBack}
-        />
+        <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+            <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h1>Review Papers ({papers.length})</h1>
+                <div>
+                    <button 
+                        onClick={handleSaveAll}
+                        disabled={isSavingAll}
+                        style={{ 
+                            marginRight: '10px', 
+                            padding: '10px 20px', 
+                            backgroundColor: isSavingAll ? '#6c757d' : '#007bff', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '4px',
+                            cursor: isSavingAll ? 'not-allowed' : 'pointer'
+                        }}
+                    >
+                        {isSavingAll ? 'Saving All...' : 'Save All'}
+                    </button>
+                    <button 
+                        onClick={handleBack}
+                        style={{ 
+                            padding: '10px 20px', 
+                            backgroundColor: '#6c757d', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '4px' 
+                        }}
+                    >
+                        Back
+                    </button>
+                </div>
+            </div>
+
+            {/* Display DOI errors */}
+            {doiErrors && doiErrors.length > 0 && (
+                <div style={{ 
+                    backgroundColor: '#fff3cd', 
+                    border: '1px solid #ffeaa7', 
+                    borderRadius: '4px', 
+                    padding: '15px', 
+                    marginBottom: '20px',
+                    color: '#856404'
+                }}>
+                    <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>⚠️ Metadata Retrieval Issues</h3>
+                    {doiErrors.map((error, index) => (
+                        <p key={index} style={{ margin: '5px 0', fontSize: '14px' }}>
+                            • {error}
+                        </p>
+                    ))}
+                    <p style={{ margin: '10px 0 0 0', fontSize: '12px', fontStyle: 'italic' }}>
+                        You can manually fill in the information for these papers below.
+                    </p>
+                    <button 
+                        onClick={() => setDoiErrors([])}
+                        style={{ 
+                            marginTop: '10px',
+                            padding: '5px 10px', 
+                            backgroundColor: '#856404', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '3px',
+                            fontSize: '12px'
+                        }}
+                    >
+                        Dismiss
+                    </button>
+                </div>
+            )}
+
+            {papers.map((paper: Paper, index : number) => (
+                <div key={index} style={{ 
+                    border: '1px solid #ddd', 
+                    borderRadius: '8px', 
+                    padding: '20px', 
+                    marginBottom: '20px',
+                    backgroundColor: '#f9f9f9'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                        <h2>Paper {index + 1}</h2>
+                        <button 
+                            onClick={() => handleRemove(index)}
+                            style={{ 
+                                padding: '5px 10px', 
+                                backgroundColor: '#dc3545', 
+                                color: 'white', 
+                                border: 'none', 
+                                borderRadius: '4px',
+                                fontSize: '12px'
+                            }}
+                        >
+                            Remove
+                        </button>
+                    </div>
+                    
+                    {errors[index] && (
+                        <p style={{ color: 'red', textAlign: 'center', marginBottom: '10px' }}>
+                            {errors[index]}
+                        </p>
+                    )}
+                    
+                    <PaperForm
+                        authorName={paper.authorName}
+                        setAuthorName={(value) => handleChange(index, 'authorName', value)}
+                        doi={paper.doi}
+                        setDoi={(value) => handleChange(index, 'doi', value)}
+                        title={paper.title}
+                        setTitle={(value) => handleChange(index, 'title', value)}
+                        journal={paper.journal}
+                        setJournal={(value) => handleChange(index, 'journal', value)}
+                        date={paper.date}
+                        setDate={(value) => handleChange(index, 'date', value)}
+                        publicationType={paper.publicationType}
+                        setPublicationType={(value) => handleChange(index, 'publicationType', value)}
+                        additionalAuthors={paper.additionalAuthors}
+                        setAdditionalAuthors={(value) => handleChange(index, 'additionalAuthors', value)}
+                        onSave={() => handleSave(index)}
+                        onBack={handleBack} 
+                    />
+                </div>
+            ))}
         </div>
     );
 };

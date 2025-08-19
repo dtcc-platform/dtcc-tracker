@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { FormEvent, useEffect, useState, useRef } from 'react';
 import { ChatWithBoth } from '@/app/utils/api';
 import { ClearChat } from '@/app/utils/api';
-import { useRefresh } from '@/app/hooks/RefreshContext';
+import { useRefresh } from '@/app/contexts/RefreshContext';
 
 export default function ChatButton() {
   const pathname = usePathname();

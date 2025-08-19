@@ -3,7 +3,7 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ProjectForm from '@/components/ProjectForm'
 import { Project } from '@/app/types/FixedTypes'
-import { useRefresh } from '@/app/hooks/RefreshContext'
+import { useRefresh } from '@/app/contexts/RefreshContext'
 import { updateProject } from '@/app/utils/api'
 
 interface EditProjectClientProps {

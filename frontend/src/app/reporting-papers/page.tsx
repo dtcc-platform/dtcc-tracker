@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from "react";
-import { useAuth } from "../hooks/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { useRefresh } from "../hooks/RefreshContext";
+import { useRefresh } from "../contexts/RefreshContext";
 import { fetchSuperUserPaper, updateYear } from "../utils/api";
 
 export default function ReportingPage() {

@@ -4,8 +4,8 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { Paper, Project } from '@/app/types/FixedTypes'
 import { deleteProject, deletePaper } from '@/app/utils/api'
-import { useRefresh } from '../app/hooks/RefreshContext'
-import { useAuth } from '@/app/hooks/AuthContext'
+import { useRefresh } from '../app/contexts/RefreshContext'
+import { useAuth } from '@/app/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 interface SidebarProps {
   papers: Paper[]

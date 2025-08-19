@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import EditProjectClient from './EditProjectClient'
 import { Paper } from '@/app/types/FixedTypes'
-import { useRefresh } from '@/app/hooks/RefreshContext'
+import { useRefresh } from '@/app/contexts/RefreshContext'
 
 export default async function EditPaperPage(
   props: {

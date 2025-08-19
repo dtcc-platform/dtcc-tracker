@@ -4,10 +4,11 @@ import path from 'path';
 import fs from 'fs';
 import Header from '@/components/header';
 import { Paper, Project } from './types/FixedTypes';
-import { RefreshProvider } from '@/app/hooks/RefreshContext';
-import { AuthProvider } from './hooks/AuthContext';
+import { RefreshProvider } from '@/app/contexts/RefreshContext';
+import { AuthProvider } from './contexts/AuthContext';
 import ChatButton from '@/components/ChatButton';
 export const dynamic = 'force-dynamic';
+import { PaperProvider } from './contexts/PaperContext';
 function getPapers(): Project[] {
   try {
     const filePath = path.join(process.cwd(), 'src', 'data', 'papers.json');
@@ -35,26 +36,28 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <AuthProvider>
       <RefreshProvider>
-        <html lang="en">
-          <body style={{ margin: 0, padding: 0 }}>
-            <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
-              {/* Sidebar */}
+        <PaperProvider>
+          <html lang="en">
+            <body style={{ margin: 0, padding: 0 }}>
+              <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+                {/* Sidebar */}
 
-              <Header/>
-              {/* Page content */}
-              <main
-                style={{
-                  paddingTop: `${HEADER_HEIGHT}px`, // Ensure content starts below the header
-                  flex: 1,
-                  overflow: 'auto',
-                }}
-              >
-                {children}
-              </main>
-            </div>
-            <ChatButton></ChatButton>
-          </body>
-        </html>
+                <Header />
+                {/* Page content */}
+                <main
+                  style={{
+                    paddingTop: `${HEADER_HEIGHT}px`, // Ensure content starts below the header
+                    flex: 1,
+                    overflow: 'auto',
+                  }}
+                >
+                  {children}
+                </main>
+              </div>
+              <ChatButton></ChatButton>
+            </body>
+          </html>
+        </PaperProvider>
       </RefreshProvider>
     </AuthProvider>
   );

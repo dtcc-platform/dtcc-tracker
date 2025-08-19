@@ -1,7 +1,7 @@
 'use client'
 
-import { useRefresh } from '../app/hooks/RefreshContext';
-import { useAuth } from '@/app/hooks/AuthContext';
+import { useRefresh } from '../app/contexts/RefreshContext';
+import { useAuth } from '@/app/contexts/AuthContext';
 
 interface Info {
     paperIndex: string;

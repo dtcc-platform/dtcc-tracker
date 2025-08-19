@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "../hooks/AuthContext";
+import { useAuth } from "../contexts/AuthContext";
 import {
   fetchUsers,
   createUser,

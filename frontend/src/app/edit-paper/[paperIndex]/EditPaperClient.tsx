@@ -2,7 +2,7 @@
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Paper } from '@/app/types/FixedTypes'
-import { useRefresh } from '@/app/hooks/RefreshContext'
+import { useRefresh } from '@/app/contexts/RefreshContext'
 import { updatePaper } from '@/app/utils/api'
 import PaperForm from '@/components/PaperForm'
 

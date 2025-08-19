@@ -205,8 +205,8 @@ export const updatePaper = async (id: number, paper: Partial<Paper>) => {
 export interface DoiMetadata {
   Title: string;
   Authors: {
-      "Main Author": { first_name: string; last_name: string } | string;
-      "Additional Authors": { first_name: string; last_name: string }[];
+      "Main Author":  string;
+      "Additional Authors": string [];
   };
   PublishedOn: string;
   Publisher: string;
