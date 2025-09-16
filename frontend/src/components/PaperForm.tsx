@@ -42,7 +42,7 @@ const PaperForm: React.FC<PaperFormProps> = ({
     onBack,
 }) => {
     const router = useRouter();
-    const publicationTypes = ["Article in journal", "Monograph", "Conference Paper", "Other"];
+    const publicationTypes = ["Article in journal", "Monograph", "Conference proceedings", "Other"];
     
     const addAuthor = () => {
         setAdditionalAuthors([...additionalAuthors, '']);
