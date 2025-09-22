@@ -7,8 +7,8 @@ import { Paper, Project } from '@/app/types/FixedTypes';
 import { gradients, palette, shadows } from '@/app/theme';
 
 interface Info {
-  paperIndex: string;
-  projectIndex: string;
+  paperIndex: string | undefined;
+  projectIndex: string | undefined;
 }
 
 type MaybeProject = Project | null;
