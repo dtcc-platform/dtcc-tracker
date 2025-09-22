@@ -1,79 +1,120 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect, CSSProperties } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import styles from "./Login.module.css";
 import Image from "next/image";
 import newLogo from "../../../public/dtcc-logo-new.png";
-import {useRefresh} from "../contexts/RefreshContext";
+import { useRefresh } from "../contexts/RefreshContext";
 import { BASE_URL } from "../types/FixedTypes";
+
+const brandingCardStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: "1rem",
+  padding: "1.75rem 2rem",
+  backgroundColor: "rgba(10, 20, 46, 0.45)",
+  borderRadius: "24px",
+  border: "1px solid rgba(255, 255, 255, 0.16)",
+  boxShadow: "0 24px 50px rgba(5, 12, 31, 0.4)",
+  backdropFilter: "blur(18px)",
+  color: "#f7f9ff",
+};
+
+const brandingDividerStyle: CSSProperties = {
+  height: "44px",
+  width: "1px",
+  backgroundColor: "rgba(255, 255, 255, 0.28)",
+};
+
+const brandingTextStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  lineHeight: 1.05,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  fontWeight: 700,
+  fontSize: "15px",
+};
+
+const taglineStyle: CSSProperties = {
+  margin: 0,
+  fontSize: "16px",
+  color: "rgba(247, 249, 255, 0.75)",
+  textAlign: "center",
+};
+
 const LoginPage: React.FC = () => {
   const router = useRouter();
-  const { login } = useAuth(); // Get login function from auth context
+  const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null); // Error state
-  const {triggerRefresh} =useRefresh()
+  const [error, setError] = useState<string | null>(null);
+  const { triggerRefresh } = useRefresh();
+
   useEffect(() => {
     console.log("BASE_URL:", BASE_URL);
-  })
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Prevent default form submission
-  
-    const success = await login(username, password); // Check if login was successful
-  
+    e.preventDefault();
+
+    const success = await login(username, password);
+
     if (success) {
-      triggerRefresh()
-      router.push("/"); // Redirect only on success
+      triggerRefresh();
+      router.push("/");
     } else {
-      setError("Invalid username or password"); // Display error message
+      setError("Invalid username or password");
     }
   };
 
   return (
-    <div className={styles.container}>
-      <div>
-        <div className="flex items-center">
-          <Image
-            src={newLogo}
-            alt="DTCC Logo"
-            className="object-contain max-w-[100px]"  // increased from 40px to 80px
-          />
-          {/* Vertical divider with a specific color */}
-          <div className="h-10 w-px bg-[#899BAF] mx-4"></div>
-          {/* Text in two lines with larger font size */}
-          <div className="flex flex-col text-[#899BAF] leading-tight">
-            <span className="font-bold text-2xl">Digital Twin</span>
-            <span className="font-bold text-2xl">Cities Centre</span>
+    <div className={styles.screen}>
+      <div className={styles.container}>
+        <div style={brandingCardStyle}>
+          <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+            <Image
+              src={newLogo}
+              alt="DTCC Logo"
+              style={{ width: "64px", height: "64px", objectFit: "contain" }}
+              priority
+            />
+            <div style={brandingDividerStyle} />
+            <div style={brandingTextStyle}>
+              <span>Digital Twin</span>
+              <span>Cities Centre</span>
+            </div>
           </div>
+          <p style={taglineStyle}>A smarter city starts with a digital twin.</p>
+        </div>
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className={styles.input}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={styles.input}
+          />
+          {error && <p className={styles.error}>{error}</p>}
+          <button type="submit" className={styles.button}>
+            Log in
+          </button>
+        </form>
+        <div className={styles.forgotPasswordLink}>
+          <a href="/forgot-password">Forgot Password?</a>
         </div>
       </div>
-      <form onSubmit={handleSubmit} className={styles.form} style={{marginTop: "20px"}}>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          className={styles.input}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className={styles.input}
-        />
-        {error && <p className={styles.error}>{error}</p>}
-        <button type="submit" className={styles.button}>
-          Log in
-        </button>
-      </form>
-      <div className={styles.forgotPasswordLink}>
-      <a href="/forgot-password">Forgot Password?</a>
     </div>
-    </div>
-
   );
 };
 

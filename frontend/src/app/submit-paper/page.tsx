@@ -1,11 +1,12 @@
 'use client'
-import { useState } from 'react';
+import { CSSProperties, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPaper, fetchDoiMetadata } from '../utils/api';
 import { Paper } from '../types/FixedTypes';
 import { useRefresh } from '@/app/contexts/RefreshContext';
 import PaperForm from '@/components/PaperForm';
 import { usePaperContext } from '../contexts/PaperContext';
+import { gradients, palette, shadows } from '@/app/theme';
 const formatDateToYYYYMMDD = (dateString: string): string => {
     if (!dateString) return '';
 
@@ -232,20 +233,9 @@ const InputPage: React.FC = () => {
         router.push('/result');
     };
 
-    return (
-        <div
-            style={{
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                height: '100%',
-                backgroundColor: '#f5f5f5',
-                padding: '20px',
-                width: '100%',
-            }}
-        >
-            {manualInput ? (
+    if (manualInput) {
+        return (
+            <div style={pageWrapperStyle}>
                 <PaperForm
                     authorName={paper.authorName}
                     setAuthorName={(value) => handleChange('authorName', value)}
@@ -264,20 +254,23 @@ const InputPage: React.FC = () => {
                     onSave={handleSave}
                     onBack={handleBack}
                 />
-            ) : (<div
-                style={{
-                    backgroundColor: '#fff',
-                    padding: '20px',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                    maxWidth: '400px',
-                    width: '100%',
-                }}
-            >
-                {error && (
-                    <p style={{ color: 'red', textAlign: 'center', marginBottom: '10px' }}>
-                        {error}
+            </div>
+        );
+    }
+
+    return (
+        <div style={pageWrapperStyle}>
+            <div style={cardStyle}>
+                <div style={cardHeaderStyle}>
+                    <span style={cardEyebrowStyle}>Paper submission</span>
+                    <h1 style={cardTitleStyle}>Register papers via DOI</h1>
+                    <p style={cardSubtitleStyle}>
+                        Paste one DOI per line and we will fetch the metadata for you.
                     </p>
+                </div>
+
+                {error && (
+                    <p style={errorStyle}>{error}</p>
                 )}
 
                 <textarea
@@ -285,67 +278,169 @@ const InputPage: React.FC = () => {
                     name="doi"
                     value={userDOIInput}
                     onChange={(e) => setUserDOIInput(e.target.value)}
-                    style={{
-                        height: '250px',
-                        display: 'block',
-                        width: '100%',
-                        marginBottom: '10px',
-                        padding: '8px',
-                        border: '1px solid #ccc',
-                        borderRadius: '4px',
-                    }}
+                    style={textareaStyle}
                 />
 
-                <div
-                    style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        marginBottom: '10px',
-                    }}
-                >
+                <p style={helperTextStyle}>
+                    Separate multiple DOIs with a new line. Duplicate entries are ignored automatically.
+                </p>
+
+                <div style={actionsRowStyle}>
                     <button
+                        type="button"
                         onClick={handleCancel}
-                        style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#e74c3c',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                        }}
+                        style={cancelButtonStyle}
                     >
                         Cancel
                     </button>
-                    <button
-                        onClick={handleManualInput}
-                        style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#3498db',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        Manual Input
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        style={{
-                            padding: '8px 12px',
-                            backgroundColor: '#2ecc71',
-                            color: '#fff',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        Crossref Retrieve
-                    </button>
+                    <div style={actionsClusterStyle}>
+                        <button
+                            type="button"
+                            onClick={handleManualInput}
+                            style={secondaryButtonStyle}
+                        >
+                            Manual Input
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            style={primaryButtonStyle}
+                        >
+                            Crossref Retrieve
+                        </button>
+                    </div>
                 </div>
-            </div>)}
+            </div>
         </div>
     );
+
+};
+
+
+const pageWrapperStyle: CSSProperties = {
+    width: '100%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    padding: '2.5rem 0 3rem',
+};
+
+const cardStyle: CSSProperties = {
+    width: 'min(640px, 100%)',
+    backgroundImage: gradients.card,
+    borderRadius: '24px',
+    padding: '2.5rem',
+    boxShadow: shadows.card,
+    border: '1px solid rgba(12, 24, 54, 0.08)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.75rem',
+};
+
+const cardHeaderStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+};
+
+const cardEyebrowStyle: CSSProperties = {
+    alignSelf: 'flex-start',
+    padding: '0.25rem 0.85rem',
+    borderRadius: '999px',
+    backgroundColor: 'rgba(15, 33, 63, 0.08)',
+    color: palette.deepNavy,
+    fontSize: '12px',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    fontWeight: 600,
+};
+
+const cardTitleStyle: CSSProperties = {
+    margin: 0,
+    fontSize: '30px',
+    fontWeight: 700,
+    color: palette.deepNavy,
+};
+
+const cardSubtitleStyle: CSSProperties = {
+    margin: 0,
+    fontSize: '15px',
+    color: palette.textMuted,
+    lineHeight: 1.6,
+};
+
+const errorStyle: CSSProperties = {
+    margin: 0,
+    padding: '0.65rem 1rem',
+    borderRadius: '12px',
+    backgroundColor: 'rgba(245, 107, 107, 0.12)',
+    color: '#b02a37',
+    fontWeight: 600,
+};
+
+const textareaStyle: CSSProperties = {
+    minHeight: '220px',
+    padding: '1rem 1.25rem',
+    borderRadius: '18px',
+    border: '1px solid rgba(15, 33, 63, 0.16)',
+    backgroundColor: '#ffffff',
+    color: palette.deepNavy,
+    fontSize: '15px',
+    lineHeight: 1.6,
+    resize: 'vertical',
+    boxShadow: '0 20px 45px rgba(7, 15, 35, 0.12)',
+};
+
+const helperTextStyle: CSSProperties = {
+    margin: 0,
+    fontSize: '13px',
+    color: palette.textMuted,
+};
+
+const actionsRowStyle: CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '1rem',
+    flexWrap: 'wrap',
+};
+
+const actionsClusterStyle: CSSProperties = {
+    display: 'flex',
+    gap: '0.75rem',
+    flexWrap: 'wrap',
+};
+
+const cancelButtonStyle: CSSProperties = {
+    padding: '0.75rem 1.5rem',
+    borderRadius: '999px',
+    border: 'none',
+    backgroundColor: '#f56b6b',
+    color: '#ffffff',
+    fontWeight: 600,
+    cursor: 'pointer',
+    boxShadow: '0 18px 32px rgba(245, 107, 107, 0.25)',
+};
+
+const secondaryButtonStyle: CSSProperties = {
+    padding: '0.75rem 1.6rem',
+    borderRadius: '999px',
+    border: '1px solid rgba(15, 33, 63, 0.15)',
+    backgroundColor: 'rgba(15, 33, 63, 0.06)',
+    color: palette.deepNavy,
+    fontWeight: 600,
+    cursor: 'pointer',
+};
+
+const primaryButtonStyle: CSSProperties = {
+    padding: '0.75rem 1.8rem',
+    borderRadius: '999px',
+    border: 'none',
+    backgroundImage: gradients.button,
+    color: palette.textDark,
+    fontWeight: 600,
+    cursor: 'pointer',
+    boxShadow: '0 20px 40px rgba(242, 176, 67, 0.32)',
 };
 
 export default InputPage;

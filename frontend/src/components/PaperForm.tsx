@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import Dropdown from "./dropdown";
+import React, { CSSProperties } from 'react';
+import Dropdown from './dropdown';
+import { gradients, palette, shadows } from '@/app/theme';
 
 interface PaperFormProps {
     authorName: string;
@@ -41,9 +41,8 @@ const PaperForm: React.FC<PaperFormProps> = ({
     onSave,
     onBack,
 }) => {
-    const router = useRouter();
-    const publicationTypes = ["Article in journal", "Monograph", "Conference proceedings", "Other"];
-    
+    const publicationTypes = ['Article in journal', 'Monograph', 'Conference proceedings', 'Other'];
+
     const addAuthor = () => {
         setAdditionalAuthors([...additionalAuthors, '']);
     };
@@ -84,15 +83,14 @@ const PaperForm: React.FC<PaperFormProps> = ({
             alert('Publication Type is required');
             return false;
         }
-        
-        // Check if any additional author field is empty
+
         for (let i = 0; i < additionalAuthors.length; i++) {
             if (!additionalAuthors[i].trim()) {
                 alert(`Additional Author ${i + 2} cannot be empty`);
                 return false;
             }
         }
-        
+
         return true;
     };
 
@@ -103,69 +101,73 @@ const PaperForm: React.FC<PaperFormProps> = ({
     };
 
     return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '90vh' }}>
-            <div className="bg-white p-6 rounded-lg shadow-lg">
-                <h1 className="text-center text-xl font-bold mb-4">Paper Details</h1>
+        <div style={formWrapperStyle}>
+            <div style={formCardStyle}>
+                <header style={formHeaderStyle}>
+                    <span style={formEyebrowStyle}>Publication</span>
+                    <h1 style={formTitleStyle}>Paper Details</h1>
+                    <p style={formSubtitleStyle}>Provide the required metadata so we can categorise this publication.</p>
+                </header>
 
-                <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
-                    <div className="flex flex-col gap-3">
-                        <label className="block">
-                            <strong>Author Name: <span className="text-red-500">*</span></strong>
+                <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} style={formContentStyle}>
+                    <div style={formGridStyle}>
+                        <label style={labelStyle}>
+                            <span style={labelTextStyle}>Author Name</span>
                             <input
                                 type="text"
                                 value={authorName}
                                 onChange={(e) => setAuthorName(e.target.value)}
-                                className="w-full p-2 border border-blue-500 rounded mt-1"
+                                style={inputStyle}
                                 required
                             />
                         </label>
 
-                        <label className="block">
-                            <strong>DOI: <span className="text-red-500">*</span></strong>
+                        <label style={labelStyle}>
+                            <span style={labelTextStyle}>DOI</span>
                             <input
                                 type="text"
                                 value={doi}
                                 onChange={(e) => setDoi(e.target.value)}
-                                className="w-full p-2 border border-blue-500 rounded mt-1"
+                                style={inputStyle}
                                 required
                             />
                         </label>
 
-                        <label className="block">
-                            <strong>Title: <span className="text-red-500">*</span></strong>
+                        <label style={labelStyle}>
+                            <span style={labelTextStyle}>Title</span>
                             <input
                                 type="text"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                className="w-full p-2 border border-blue-500 rounded mt-1"
+                                style={inputStyle}
                                 required
                             />
                         </label>
 
-                        <label className="block">
-                            <strong>Journal: <span className="text-red-500">*</span></strong>
+                        <label style={labelStyle}>
+                            <span style={labelTextStyle}>Journal</span>
                             <input
                                 type="text"
                                 value={journal}
                                 onChange={(e) => setJournal(e.target.value)}
-                                className="w-full p-2 border border-blue-500 rounded mt-1"
+                                style={inputStyle}
                                 required
                             />
                         </label>
 
-                        <label className="block">
-                            <strong>Published Date: <span className="text-red-500">*</span></strong>
+                        <label style={labelStyle}>
+                            <span style={labelTextStyle}>Published Date</span>
                             <input
                                 type="date"
                                 value={date}
                                 onChange={(e) => setDate(e.target.value)}
-                                className="w-full p-2 border border-blue-500 rounded mt-1"
+                                style={inputStyle}
                                 required
                             />
                         </label>
 
-                        <label className="block">
-                            <strong>Publication Type: <span className="text-red-500">*</span></strong>
+                        <label style={labelStyle}>
+                            <span style={labelTextStyle}>Publication Type</span>
                             <Dropdown
                               options={publicationTypes}
                               value={publicationType}
@@ -174,51 +176,52 @@ const PaperForm: React.FC<PaperFormProps> = ({
                               required
                             />
                         </label>
+                    </div>
 
-                        {/* Additional Authors */}
-                        <div>
-                            <strong>Additional Authors:</strong>
+                    <div style={collaboratorSectionStyle}>
+                        <span style={labelTextStyle}>Additional Authors</span>
+                        <div style={collaboratorListStyle}>
                             {additionalAuthors.map((author, index) => (
-                                <div key={index} className="flex items-center mt-2 space-x-2">
+                                <div key={index} style={collaboratorRowStyle}>
                                     <input
                                         type="text"
                                         value={author}
                                         onChange={(e) => handleAuthorChange(index, e.target.value)}
-                                        className="w-full p-2 border border-blue-500 rounded"
+                                        style={inputStyle}
                                         placeholder={`Author ${index + 2}`}
                                         required
                                     />
                                     <button
                                         type="button"
                                         onClick={() => removeAuthor(index)}
-                                        className="bg-red-500 text-white px-2 py-1 rounded-full text-lg"
+                                        style={removeButtonStyle}
                                     >
-                                        −
+                                        x
                                     </button>
                                 </div>
                             ))}
-                            <button
-                                type="button"
-                                onClick={addAuthor}
-                                className="mt-2 bg-green-500 text-white px-2 py-1 rounded-full text-lg"
-                            >
-                                +
-                            </button>
                         </div>
+                        <button
+                            type="button"
+                            onClick={addAuthor}
+                            style={addButtonStyle}
+                        >
+                            + Add another author
+                        </button>
                     </div>
 
-                    <div className="flex justify-between mt-5">
-                        <button 
+                    <div style={actionRowStyle}>
+                        <button
                             type="button"
-                            onClick={onBack} 
-                            className="bg-gray-500 text-white px-4 py-2 rounded"
+                            onClick={onBack}
+                            style={secondaryButtonStyle}
                         >
                             Back
                         </button>
 
-                        <button 
+                        <button
                             type="submit"
-                            className="bg-blue-500 text-white px-4 py-2 rounded"
+                            style={primaryButtonStyle}
                         >
                             Save
                         </button>
@@ -227,6 +230,162 @@ const PaperForm: React.FC<PaperFormProps> = ({
             </div>
         </div>
     );
+};
+
+const formWrapperStyle: CSSProperties = {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    minHeight: 'calc(100vh - 120px)',
+    padding: '2.5rem',
+};
+
+const formCardStyle: CSSProperties = {
+    width: 'min(880px, 100%)',
+    backgroundImage: gradients.card,
+    borderRadius: '24px',
+    padding: '2.5rem',
+    boxShadow: shadows.card,
+    border: '1px solid rgba(12, 24, 54, 0.08)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2rem',
+};
+
+const formHeaderStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+};
+
+const formEyebrowStyle: CSSProperties = {
+    display: 'inline-block',
+    padding: '0.25rem 0.75rem',
+    borderRadius: '999px',
+    backgroundColor: 'rgba(15, 33, 63, 0.08)',
+    color: palette.deepNavy,
+    fontSize: '12px',
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    fontWeight: 600,
+    width: 'fit-content',
+};
+
+const formTitleStyle: CSSProperties = {
+    margin: 0,
+    fontSize: '30px',
+    fontWeight: 700,
+    color: palette.deepNavy,
+};
+
+const formSubtitleStyle: CSSProperties = {
+    margin: 0,
+    fontSize: '16px',
+    color: palette.textMuted,
+};
+
+const formContentStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.75rem',
+};
+
+const formGridStyle: CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gap: '1.25rem',
+};
+
+const labelStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.5rem',
+    color: palette.deepNavy,
+};
+
+const labelTextStyle: CSSProperties = {
+    fontSize: '13px',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
+    fontWeight: 600,
+    color: palette.textMuted,
+};
+
+const inputStyle: CSSProperties = {
+    padding: '0.75rem 1rem',
+    borderRadius: '12px',
+    border: '1px solid rgba(15, 33, 63, 0.16)',
+    backgroundColor: '#ffffff',
+    fontSize: '15px',
+    color: palette.deepNavy,
+};
+
+const collaboratorSectionStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+};
+
+const collaboratorListStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '0.75rem',
+};
+
+const collaboratorRowStyle: CSSProperties = {
+    display: 'flex',
+    gap: '0.75rem',
+    alignItems: 'center',
+};
+
+const removeButtonStyle: CSSProperties = {
+    backgroundColor: '#ff6b6b',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '12px',
+    padding: '0.5rem 0.85rem',
+    cursor: 'pointer',
+    fontWeight: 600,
+};
+
+const addButtonStyle: CSSProperties = {
+    alignSelf: 'flex-start',
+    padding: '0.6rem 1.1rem',
+    borderRadius: '999px',
+    border: '1px solid rgba(15, 33, 63, 0.18)',
+    backgroundColor: 'rgba(15, 33, 63, 0.08)',
+    color: palette.deepNavy,
+    fontWeight: 600,
+    cursor: 'pointer',
+};
+
+const actionRowStyle: CSSProperties = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '1rem',
+};
+
+const secondaryButtonStyle: CSSProperties = {
+    padding: '0.75rem 1.5rem',
+    borderRadius: '999px',
+    border: '1px solid rgba(15, 33, 63, 0.18)',
+    backgroundColor: 'transparent',
+    color: palette.deepNavy,
+    fontWeight: 600,
+    cursor: 'pointer',
+};
+
+const primaryButtonStyle: CSSProperties = {
+    padding: '0.75rem 1.75rem',
+    borderRadius: '999px',
+    border: 'none',
+    backgroundImage: gradients.button,
+    color: palette.deepNavy,
+    fontWeight: 700,
+    letterSpacing: '0.02em',
+    cursor: 'pointer',
+    boxShadow: '0 18px 35px rgba(242, 176, 67, 0.35)',
 };
 
 export default PaperForm;

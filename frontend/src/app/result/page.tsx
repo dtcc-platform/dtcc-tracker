@@ -1,13 +1,14 @@
 // Updated ResultPage component with fixed Save All functionality
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, CSSProperties } from 'react';
 import PaperForm from '@/components/PaperForm';
 import { Paper } from '../types/FixedTypes';
 import { useRouter } from 'next/navigation';
 import { createPaper } from '../utils/api';
 import { useRefresh } from '../contexts/RefreshContext';
 import { usePaperContext } from '../contexts/PaperContext';
+import { gradients, palette } from '../theme';
 
 const formatDateToYYYYMMDD = (dateString: string): string => {
     if (!dateString) return '';
@@ -36,6 +37,41 @@ const formatDateToYYYYMMDD = (dateString: string): string => {
     const year = date.getFullYear();
     
     return `${year}-${month}-${day}`;
+};
+
+const actionButtonGroupStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: '0.75rem',
+    flexWrap: 'wrap',
+};
+
+const getPrimaryActionButtonStyle = (disabled: boolean): CSSProperties => ({
+    padding: '0.85rem 1.85rem',
+    borderRadius: '999px',
+    border: 'none',
+    backgroundImage: disabled ? 'none' : gradients.button,
+    backgroundColor: disabled ? 'rgba(17, 35, 71, 0.35)' : undefined,
+    color: disabled ? 'rgba(247, 249, 255, 0.75)' : palette.deepNavy,
+    fontWeight: 700,
+    letterSpacing: '0.02em',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    boxShadow: disabled ? 'none' : '0 18px 35px rgba(242, 176, 67, 0.35)',
+    transition: 'transform 0.2s ease, filter 0.2s ease',
+    opacity: disabled ? 0.75 : 1,
+});
+
+const secondaryActionButtonStyle: CSSProperties = {
+    padding: '0.8rem 1.6rem',
+    borderRadius: '999px',
+    border: '1px solid rgba(17, 35, 71, 0.22)',
+    backgroundColor: 'rgba(17, 35, 71, 0.08)',
+    color: palette.deepNavy,
+    fontWeight: 600,
+    letterSpacing: '0.01em',
+    cursor: 'pointer',
+    transition: 'transform 0.2s ease, filter 0.2s ease',
 };
 
 const ResultPage: React.FC = () => {
@@ -166,40 +202,27 @@ const ResultPage: React.FC = () => {
         return (
             <div style={{ textAlign: 'center', padding: '20px' }}>
                 <p>No papers to display.</p>
-                <button onClick={handleBack}>Go Back</button>
+                <button type="button" onClick={handleBack} style={secondaryActionButtonStyle}>Go Back</button>
             </div>
         );
     }
 
     return (
         <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-            <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <h1>Review Papers ({papers.length})</h1>
-                <div>
-                    <button 
+                <div style={actionButtonGroupStyle}>
+                    <button
                         onClick={handleSaveAll}
                         disabled={isSavingAll}
-                        style={{ 
-                            marginRight: '10px', 
-                            padding: '10px 20px', 
-                            backgroundColor: isSavingAll ? '#6c757d' : '#007bff', 
-                            color: 'white', 
-                            border: 'none', 
-                            borderRadius: '4px',
-                            cursor: isSavingAll ? 'not-allowed' : 'pointer'
-                        }}
+                        style={getPrimaryActionButtonStyle(isSavingAll)}
                     >
                         {isSavingAll ? 'Saving All...' : 'Save All'}
                     </button>
-                    <button 
+                    <button
+                        type="button"
                         onClick={handleBack}
-                        style={{ 
-                            padding: '10px 20px', 
-                            backgroundColor: '#6c757d', 
-                            color: 'white', 
-                            border: 'none', 
-                            borderRadius: '4px' 
-                        }}
+                        style={secondaryActionButtonStyle}
                     >
                         Back
                     </button>
@@ -298,3 +321,4 @@ const ResultPage: React.FC = () => {
 };
 
 export default ResultPage;
+
