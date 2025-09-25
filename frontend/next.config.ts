@@ -15,5 +15,11 @@ const config: NextConfig = {
     ignoreDuringBuilds: true,
   }
 };
+// next.config.js
+module.exports = {
+  basePath: '/tracker',
+  assetPrefix: '/tracker',
+  trailingSlash: true,
+}
 
 export default config;
