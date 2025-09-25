@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
 
   basePath: '/tracker',
   assetPrefix: '/tracker',
-  trailingSlash: true,
+  // trailingSlash: true,
 };
 
 export default nextConfig;
