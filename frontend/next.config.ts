@@ -12,10 +12,6 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true, 
   },
-
-  basePath: '/tracker',
-  assetPrefix: '/tracker',
-  // trailingSlash: true,
 };
 
 export default nextConfig;
