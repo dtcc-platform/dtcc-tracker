@@ -26,6 +26,7 @@ class Paper(models.Model):
     additional_authors = models.JSONField(default=list)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     publication_type = models.CharField(max_length=255, default="")
+    milestone_project = models.CharField(max_length=255, default="", blank=True)
     submission_year = models.IntegerField(null=True, blank=True)
 
     is_master_copy = models.BooleanField(default=False) 

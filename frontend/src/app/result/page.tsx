@@ -309,6 +309,8 @@ const ResultPage: React.FC = () => {
                         setDate={(value) => handleChange(index, 'date', value)}
                         publicationType={paper.publicationType}
                         setPublicationType={(value) => handleChange(index, 'publicationType', value)}
+                        milestoneProject={paper.milestoneProject || ''}
+                        setMilestoneProject={(value) => handleChange(index, 'milestoneProject', value)}
                         additionalAuthors={paper.additionalAuthors}
                         setAdditionalAuthors={(value) => handleChange(index, 'additionalAuthors', value)}
                         onSave={() => handleSave(index)}

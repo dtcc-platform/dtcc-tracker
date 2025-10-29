@@ -46,7 +46,8 @@ const InputPage: React.FC = () => {
         date: '',
         title: '',
         additionalAuthors: [],
-        publicationType: ''
+        publicationType: '',
+        milestoneProject: ''
     });
     const { triggerRefresh } = useRefresh();
     const router = useRouter();
@@ -249,6 +250,8 @@ const InputPage: React.FC = () => {
                     setDate={(value) => handleChange('date', value)}
                     publicationType={paper.publicationType}
                     setPublicationType={(value) => handleChange('publicationType', value)}
+                    milestoneProject={paper.milestoneProject || ''}
+                    setMilestoneProject={(value) => handleChange('milestoneProject', value)}
                     additionalAuthors={paper.additionalAuthors}
                     setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
                     onSave={handleSave}

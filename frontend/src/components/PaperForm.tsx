@@ -17,6 +17,8 @@ interface PaperFormProps {
     setDate: (value: string) => void;
     publicationType: string;
     setPublicationType: (value: string) => void;
+    milestoneProject: string;
+    setMilestoneProject: (value: string) => void;
     additionalAuthors: string[];
     setAdditionalAuthors: (value: string[]) => void;
     onSave: () => void;
@@ -36,12 +38,27 @@ const PaperForm: React.FC<PaperFormProps> = ({
     setDate,
     publicationType,
     setPublicationType,
+    milestoneProject,
+    setMilestoneProject,
     additionalAuthors,
     setAdditionalAuthors,
     onSave,
     onBack,
 }) => {
     const publicationTypes = ['Article in journal', 'Monograph', 'Conference proceedings', 'Other'];
+    const milestoneProjects = [
+        'Crowd movement',
+        'Digital twins for circularity',
+        'Data models for digital twin cities',
+        'Twinable',
+        'Urban environmental comfort design',
+        'Digital twin of construction site',
+        'Design and data',
+        '4D digital twin for underground and natural hazards',
+        'Twin re-fab',
+        'Digital twin platform',
+        'Other'
+    ];
 
     const addAuthor = () => {
         setAdditionalAuthors([...additionalAuthors, '']);
@@ -81,6 +98,10 @@ const PaperForm: React.FC<PaperFormProps> = ({
         }
         if (!publicationType) {
             alert('Publication Type is required');
+            return false;
+        }
+        if (!milestoneProject) {
+            alert('Milestone Project is required');
             return false;
         }
 
@@ -173,6 +194,17 @@ const PaperForm: React.FC<PaperFormProps> = ({
                               value={publicationType}
                               onChange={setPublicationType}
                               placeholder='Select publication type'
+                              required
+                            />
+                        </label>
+
+                        <label style={labelStyle}>
+                            <span style={labelTextStyle}>Milestone Project</span>
+                            <Dropdown
+                              options={milestoneProjects}
+                              value={milestoneProject}
+                              onChange={setMilestoneProject}
+                              placeholder='Select milestone project'
                               required
                             />
                         </label>

@@ -20,6 +20,7 @@ export interface Paper{
   additionalAuthors: string[]
   submittedBy? : string
   publicationType: string
+  milestoneProject?: string
   submissionYear?: number
 }
 export interface User {
