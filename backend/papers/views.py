@@ -22,6 +22,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.permissions import IsAdminUser
 from django_ratelimit.decorators import ratelimit
+from .rate_limiting import RateLimitMixin, api_rate_limit
 import boto3
 import re
 from botocore.exceptions import ClientError
@@ -38,7 +39,8 @@ class CustomTokenVerifyView(TokenVerifyView):
 BEDROCK_MODEL_ID = "meta.llama3-70b-instruct-v1:0"
 BEDROCK_REGION = "us-west-2"
 
-class ChatbotView(APIView):
+class ChatbotView(RateLimitMixin, APIView):
+    rate_limit_type = 'chat'
     permission_classes = [permissions.IsAuthenticated]
 
     def __init__(self):
@@ -345,7 +347,7 @@ class ChatbotView(APIView):
         ChatMessage.objects.filter(user=user).delete()
         return Response({"message": "Chat history cleared"})
     
-class ClearChatHistory(APIView):
+class ClearChatHistory(RateLimitMixin, APIView):
     def post(self, request):
         request.session.flush()  # Clears session, including chat history
         return Response({"message": "Cleared History successfully"})
@@ -464,7 +466,7 @@ def logout_view(request):
     return response
 
 
-class PaperListCreateView(APIView):
+class PaperListCreateView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -511,7 +513,7 @@ class PaperListCreateView(APIView):
             errors['error'] = 'Duplicate key error'
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SuperuserPaperUpdateView(APIView):
+class SuperuserPaperUpdateView(RateLimitMixin, APIView):
     """
     Superuser can update submission year for papers
     """
@@ -534,7 +536,7 @@ class SuperuserPaperUpdateView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SuperuserBulkUpdateView(APIView):
+class SuperuserBulkUpdateView(RateLimitMixin, APIView):
     """
     Bulk update submission year for multiple papers
     """
@@ -583,7 +585,7 @@ class SuperuserBulkUpdateView(APIView):
         }, status=status.HTTP_200_OK)
 
 # Update your existing PaperListCreateView post method
-class PaperListCreateView(APIView):
+class PaperListCreateView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -644,7 +646,7 @@ class PaperListCreateView(APIView):
             errors['error'] = 'Duplicate key error'
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SuperuserPaperListView(APIView):
+class SuperuserPaperListView(RateLimitMixin, APIView):
     """
     Superuser sees only their master copies (deduplicated view)
     """
@@ -674,7 +676,7 @@ class SuperuserPaperListView(APIView):
         serializer = SuperuserPaperSerializer(papers, many=True, context={'request': request})
         return Response(serializer.data)
 
-class SuperuserSubmissionStatsView(APIView):
+class SuperuserSubmissionStatsView(RateLimitMixin, APIView):
     """
     Get submission statistics
     """
@@ -711,7 +713,7 @@ class SuperuserSubmissionStatsView(APIView):
         
         return Response(stats)
 
-class PaperDeleteView(APIView):
+class PaperDeleteView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, pk):
@@ -723,7 +725,7 @@ class PaperDeleteView(APIView):
         paper.delete()
         return JsonResponse({"message": "Paper deleted successfully"}, status=200)
 
-class PaperUpdateView(APIView):
+class PaperUpdateView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def put(self, request, pk):
@@ -749,7 +751,7 @@ class PaperUpdateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProjectListCreateView(APIView):
+class ProjectListCreateView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -781,7 +783,7 @@ class ProjectListCreateView(APIView):
 
 
 
-class ProjectDeleteView(APIView):
+class ProjectDeleteView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, pk):
@@ -799,7 +801,7 @@ class ProjectDeleteView(APIView):
         project.delete()
         return JsonResponse({"message": "Project deleted successfully"}, status=200)
 
-class ProjectUpdateView(APIView):
+class ProjectUpdateView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def put(self, request, pk):
@@ -906,7 +908,7 @@ def fetch_doi_metadata(doi):
         return {"error": f"Failed to fetch metadata for DOI {doi}. HTTP Status: {response.status_code}"}
 
 
-class DOIInfoView(APIView):
+class DOIInfoView(RateLimitMixin, APIView):
     def post(self, request):
         """Fetch DOI metadata from Crossref API."""
         doi = request.data.get('doi')
@@ -921,7 +923,7 @@ class DOIInfoView(APIView):
         return Response(metadata, status=status.HTTP_200_OK)
     
 
-class UserListCreateAPIView(APIView):
+class UserListCreateAPIView(RateLimitMixin, APIView):
     permission_classes = [IsAdminUser]  # Only admin/superuser can access
 
     def get(self, request):
@@ -939,7 +941,7 @@ class UserListCreateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserDetailAPIView(APIView):
+class UserDetailAPIView(RateLimitMixin, APIView):
     permission_classes = [IsAdminUser]
 
     def get_object(self, pk):

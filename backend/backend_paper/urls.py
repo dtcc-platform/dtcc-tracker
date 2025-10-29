@@ -20,6 +20,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('papers.urls')),  # Ensure this is correctly included
-
+    # API versioning
+    path('api/v1/', include('papers.v1_urls')),  # Version 1 (current)
+    path('api/', include('papers.urls')),  # Legacy support (redirects to v1)
 ]

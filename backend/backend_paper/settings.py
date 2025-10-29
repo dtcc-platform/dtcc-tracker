@@ -199,3 +199,20 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5 MB
 
 # Restrict allowed file extensions for uploads (if you have file uploads)
 ALLOWED_UPLOAD_EXTENSIONS = ['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg']
+
+# Celery Configuration
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Celery Beat schedule for periodic tasks
+CELERY_BEAT_SCHEDULE = {
+    'cleanup-old-chat-messages': {
+        'task': 'papers.tasks.cleanup_old_messages',
+        'schedule': 86400.0,  # Run daily
+    },
+}
