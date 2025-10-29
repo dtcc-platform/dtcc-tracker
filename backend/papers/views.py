@@ -7,8 +7,11 @@ from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import IntegrityError
+from django.core.cache import cache
+from django.views.decorators.cache import cache_page
 from .models import Paper, Project, ChatMessage
 from .serializers import PaperSerializer, ProjectSerializer, CustomTokenVerifySerializer, SuperuserPaperSerializer, UserSerializer
+from .cache_utils import CacheMixin, cache_result, invalidate_cache_pattern
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
@@ -466,25 +469,39 @@ def logout_view(request):
     return response
 
 
-class PaperListCreateView(RateLimitMixin, APIView):
+class PaperListCreateView(RateLimitMixin, CacheMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
+    cache_key_prefix = 'papers'
+    cache_timeout = 300  # 5 minutes
 
     def get(self, request):
         """
         Regular users see only their own papers (excluding master copies)
         Superusers see their master copies for deduplication
         """
+        # Generate cache key
+        cache_key = self.get_list_cache_key(request)
+
+        # Try to get from cache
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return Response(cached_data)
+
         if request.user.is_superuser:
             papers = Paper.objects.filter(user=request.user, is_master_copy=True)
         else:
             papers = Paper.objects.filter(user=request.user, is_master_copy=False)
-        
+
         serializer = PaperSerializer(papers, many=True)
+
+        # Cache the result
+        cache.set(cache_key, serializer.data, timeout=self.cache_timeout)
+
         return Response(serializer.data)
 
     def post(self, request):
         """
-        Create a new paper. 
+        Create a new paper.
         - Regular users: creates normal paper + auto-copies to superuser
         - Superusers: creates master copy directly
         """
@@ -492,6 +509,11 @@ class PaperListCreateView(RateLimitMixin, APIView):
         if serializer.is_valid():
             try:
                 paper = serializer.save(user=request.user)
+
+                # Invalidate cache after creation
+                self.invalidate_list_cache()
+                invalidate_cache_pattern('papers:*')
+
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             except IntegrityError as e:
                 # Handle duplicate DOI
@@ -502,12 +524,12 @@ class PaperListCreateView(RateLimitMixin, APIView):
                             {"error": "You already have this paper as a master copy", "field": "doi"},
                             status=status.HTTP_400_BAD_REQUEST,
                         )
-                
+
                 return Response(
                     {"error": "Duplicate DOI error", "field": "doi"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        
+
         errors = serializer.errors.copy()
         if 'non_field_errors' in errors:
             errors['error'] = 'Duplicate key error'
@@ -584,67 +606,6 @@ class SuperuserBulkUpdateView(RateLimitMixin, APIView):
             "updated_papers": updated_count
         }, status=status.HTTP_200_OK)
 
-# Update your existing PaperListCreateView post method
-class PaperListCreateView(RateLimitMixin, APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        """
-        Regular users see only their own papers (excluding master copies)
-        Superusers see their master copies
-        """
-        print(f"DEBUG: GET request from user: {request.user.username}, is_superuser: {request.user.is_superuser}")
-        
-        if request.user.is_superuser:
-            papers = Paper.objects.filter(user=request.user, is_master_copy=True)
-            print(f"DEBUG: Superuser query - found {papers.count()} master copies")
-        else:
-            papers = Paper.objects.filter(user=request.user, is_master_copy=False)
-            print(f"DEBUG: Regular user query - found {papers.count()} non-master papers")
-        
-        # Let's also show what papers exist for this user
-        all_user_papers = Paper.objects.filter(user=request.user)
-        print(f"DEBUG: All papers for user {request.user.username}: {all_user_papers.count()}")
-        for p in all_user_papers:
-            print(f"DEBUG: Paper ID: {p.id}, DOI: {p.doi}, is_master_copy: {p.is_master_copy}")
-        
-        serializer = PaperSerializer(papers, many=True)
-        return Response(serializer.data)
-
-    def post(self, request):
-        """Create a new paper and auto-copy to superuser."""
-        print(f"DEBUG: POST request received from user: {request.user.username}")
-        print(f"DEBUG: Request data: {request.data}")
-        
-        serializer = PaperSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            print("DEBUG: Serializer is valid")
-            try:
-                # Remove the explicit is_master_copy parameter - let the serializer handle it
-                paper = serializer.save(user=request.user)
-                print(f"DEBUG: Paper saved successfully: {paper.id}")
-                
-                # Let's also check what papers exist after creation
-                all_papers = Paper.objects.all()
-                print(f"DEBUG: Total papers in database: {all_papers.count()}")
-                for p in all_papers:
-                    print(f"DEBUG: Paper ID: {p.id}, DOI: {p.doi}, User: {p.user.username}, is_master_copy: {p.is_master_copy}")
-                
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except IntegrityError as e:
-                print(f"DEBUG: IntegrityError occurred: {e}")
-                return Response(
-                    {"error": "Duplicate DOI error", "field": "doi"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        else:
-            print(f"DEBUG: Serializer is invalid: {serializer.errors}")
-            
-        errors = serializer.errors.copy()
-        print(errors)
-        if 'non_field_errors' in errors:
-            errors['error'] = 'Duplicate key error'
-        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
 class SuperuserPaperListView(RateLimitMixin, APIView):
     """

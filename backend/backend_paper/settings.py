@@ -116,12 +116,45 @@ WSGI_APPLICATION = 'backend_paper.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+import dj_database_url
+
+# Default SQLite for development
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Use PostgreSQL if DATABASE_URL is set (production)
+database_url = config('DATABASE_URL', default=None)
+if database_url:
+    DATABASES['default'] = dj_database_url.parse(
+        database_url,
+        conn_max_age=600,  # Connection pooling
+        conn_health_checks=True,
+    )
+    # Add additional PostgreSQL-specific settings
+    DATABASES['default']['OPTIONS'] = {
+        'connect_timeout': 10,
+        'options': '-c statement_timeout=30000'  # 30 seconds statement timeout
+    }
+    DATABASES['default']['ATOMIC_REQUESTS'] = True  # Wrap each request in transaction
+else:
+    # Development-specific database configuration
+    if config('USE_POSTGRES_DEV', default=False, cast=bool):
+        DATABASES['default'] = {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default='dtcc_tracker'),
+            'USER': config('DB_USER', default='dtcc_user'),
+            'PASSWORD': config('DB_PASSWORD', default='dtcc_password'),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+            'CONN_MAX_AGE': 600,
+            'OPTIONS': {
+                'connect_timeout': 10,
+            }
+        }
 
 
 # Password validation
@@ -199,6 +232,37 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5 MB
 
 # Restrict allowed file extensions for uploads (if you have file uploads)
 ALLOWED_UPLOAD_EXTENSIONS = ['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg']
+
+# Redis Configuration for Caching
+REDIS_HOST = config('REDIS_HOST', default='localhost')
+REDIS_PORT = config('REDIS_PORT', default=6379, cast=int)
+REDIS_DB = config('REDIS_DB', default=0, cast=int)
+REDIS_PASSWORD = config('REDIS_PASSWORD', default=None)
+
+# Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PARSER_CLASS': 'redis.connection.HiredisParser',
+            'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
+            'CONNECTION_POOL_CLASS_KWARGS': {
+                'max_connections': 50,
+                'timeout': 20,
+            },
+            'MAX_CONNECTIONS': 1000,
+            'PICKLE_VERSION': -1,
+        },
+        'KEY_PREFIX': 'dtcc',
+        'TIMEOUT': config('CACHE_TTL', default=300, cast=int),  # Default 5 minutes
+    }
+}
+
+# Session Cache (use Redis for sessions)
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
 
 # Celery Configuration
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
