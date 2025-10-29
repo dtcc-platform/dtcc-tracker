@@ -1,0 +1,23 @@
+[Unit]
+Description=DTCC Tracker Daily Backup Timer
+Documentation=https://github.com/your-repo/dtcc-tracker
+Requires=dtcc-backup.service
+
+[Timer]
+# Run daily at 2:30 AM
+OnCalendar=*-*-* 02:30:00
+
+# Also run 30 minutes after system boot (in case system was off)
+OnBootSec=30min
+
+# Randomize by up to 10 minutes to spread load
+RandomizedDelaySec=10min
+
+# If system was off when timer should trigger, run immediately on next boot
+Persistent=yes
+
+# Trigger the backup service
+Unit=dtcc-backup.service
+
+[Install]
+WantedBy=timers.target
