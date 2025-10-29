@@ -3,6 +3,7 @@ from urllib.parse import unquote
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import IntegrityError
@@ -20,9 +21,15 @@ from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.permissions import IsAdminUser
+from django_ratelimit.decorators import ratelimit
 import boto3
 import re
 from botocore.exceptions import ClientError
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 100
 
 class CustomTokenVerifyView(TokenVerifyView):
     serializer_class = CustomTokenVerifySerializer
@@ -343,7 +350,7 @@ class ClearChatHistory(APIView):
         request.session.flush()  # Clears session, including chat history
         return Response({"message": "Cleared History successfully"})
     
-@csrf_exempt
+@ratelimit(key='ip', rate='3/m', method='POST')  # 3 attempts per minute per IP
 def forgot_password(request):
     """
     POST: { "email": "user@example.com" }
@@ -397,7 +404,7 @@ def forgot_password(request):
         })
 
     return JsonResponse({"error": "Method not allowed."}, status=405)
-@csrf_exempt  # Disable CSRF for API requests (use CORS instead for security)
+@ratelimit(key='ip', rate='5/m', method='POST')  # 5 login attempts per minute per IP
 def login_view(request):
     if request.method == "POST":
         try:
@@ -408,22 +415,53 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 refresh = RefreshToken.for_user(user)  # Generate JWT tokens
-                return JsonResponse({
-                    "access_token": str(refresh.access_token),
-                    "refresh_token": str(refresh),
+
+                # Create response without tokens in body
+                response = JsonResponse({
                     "user": {
                         "id": user.id,
                         "username": user.username,
                         "email": user.email,
                         "is_superuser": user.is_superuser
-                    }
+                    },
+                    "message": "Login successful"
                 }, status=200)
+
+                # Set tokens as httpOnly cookies
+                response.set_cookie(
+                    'access_token',
+                    str(refresh.access_token),
+                    max_age=settings.SIMPLE_JWT.get('ACCESS_TOKEN_LIFETIME').total_seconds(),
+                    httponly=True,
+                    secure=settings.SESSION_COOKIE_SECURE,  # True in production with HTTPS
+                    samesite='Lax'
+                )
+                response.set_cookie(
+                    'refresh_token',
+                    str(refresh),
+                    max_age=settings.SIMPLE_JWT.get('REFRESH_TOKEN_LIFETIME').total_seconds(),
+                    httponly=True,
+                    secure=settings.SESSION_COOKIE_SECURE,
+                    samesite='Lax'
+                )
+
+                return response
             else:
                 return JsonResponse({"error": "Invalid username or password"}, status=400)
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid request format"}, status=400)
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
+
+def logout_view(request):
+    """Logout view that clears httpOnly cookies"""
+    response = JsonResponse({"message": "Logout successful"}, status=200)
+
+    # Clear the cookies
+    response.delete_cookie('access_token')
+    response.delete_cookie('refresh_token')
+
+    return response
 
 
 class PaperListCreateView(APIView):

@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { CSSProperties } from 'react';
+import React, { CSSProperties, useMemo, memo } from 'react';
 import Dropdown from './dropdown';
 import { gradients, palette, shadows } from '@/app/theme';
 
@@ -45,8 +45,8 @@ const PaperForm: React.FC<PaperFormProps> = ({
     onSave,
     onBack,
 }) => {
-    const publicationTypes = ['Article in journal', 'Monograph', 'Conference proceedings', 'Other'];
-    const milestoneProjects = [
+    const publicationTypes = useMemo(() => ['Article in journal', 'Monograph', 'Conference proceedings', 'Other'], []);
+    const milestoneProjects = useMemo(() => [
         'Crowd movement',
         'Digital twins for circularity',
         'Data models for digital twin cities',
@@ -58,7 +58,7 @@ const PaperForm: React.FC<PaperFormProps> = ({
         'Twin re-fab',
         'Digital twin platform',
         'Other'
-    ];
+    ], []);
 
     const addAuthor = () => {
         setAdditionalAuthors([...additionalAuthors, '']);
@@ -420,4 +420,4 @@ const primaryButtonStyle: CSSProperties = {
     boxShadow: '0 18px 35px rgba(242, 176, 67, 0.35)',
 };
 
-export default PaperForm;
+export default memo(PaperForm);

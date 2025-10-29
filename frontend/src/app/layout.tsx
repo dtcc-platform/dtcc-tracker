@@ -2,11 +2,13 @@ import './globals.css';
 import { ReactNode } from 'react';
 import { RefreshProvider } from '@/app/contexts/RefreshContext';
 import { AuthProvider } from './contexts/AuthContext';
-import ChatButton from '@/components/ChatButton';
-export const dynamic = 'force-dynamic';
 import { PaperProvider } from './contexts/PaperContext';
 import { palette } from './theme';
 import AppShell from '@/components/AppShell';
+import ErrorBoundary from '@/components/ErrorBoundary';
+// import ChatButton from '@/components/ChatButton';
+
+// Removed 'force-dynamic' to enable static optimization
 
 export const metadata = {
   title: 'DTCC Tracker',
@@ -30,7 +32,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 backgroundColor: 'transparent',
               }}
             >
-              <AppShell>{children}</AppShell>
+              <ErrorBoundary>
+                <AppShell>{children}</AppShell>
+              </ErrorBoundary>
               {/* <ChatButton /> */}
             </body>
           </html>
