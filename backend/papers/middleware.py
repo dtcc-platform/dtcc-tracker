@@ -76,7 +76,17 @@ class RemoveServerHeaderMiddleware:
         response = self.get_response(request)
 
         # Remove headers that expose server information
-        response.pop('Server', None)
-        response.pop('X-Powered-By', None)
+        if hasattr(response, 'headers'):
+            response.headers.pop('Server', None)
+            response.headers.pop('X-Powered-By', None)
+        elif hasattr(response, '__delitem__'):
+            try:
+                del response['Server']
+            except KeyError:
+                pass
+            try:
+                del response['X-Powered-By']
+            except KeyError:
+                pass
 
         return response

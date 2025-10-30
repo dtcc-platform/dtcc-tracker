@@ -91,6 +91,7 @@ class RateLimitMixin:
         from django_ratelimit.core import is_ratelimited
         if is_ratelimited(
             request,
+            group=f'{self.__class__.__name__}_{self.rate_limit_method}',
             key='ip',
             rate=rate,
             method=self.rate_limit_method,

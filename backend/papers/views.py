@@ -409,6 +409,7 @@ def forgot_password(request):
         })
 
     return JsonResponse({"error": "Method not allowed."}, status=405)
+@csrf_exempt
 @ratelimit(key='ip', rate='5/m', method='POST')  # 5 login attempts per minute per IP
 def login_view(request):
     if request.method == "POST":
@@ -458,6 +459,7 @@ def login_view(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+@csrf_exempt
 def logout_view(request):
     """Logout view that clears httpOnly cookies"""
     response = JsonResponse({"message": "Logout successful"}, status=200)

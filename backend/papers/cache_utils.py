@@ -158,6 +158,6 @@ class CacheMixin:
 
 
 # Pre-configured cache decorators for common use cases
-cache_for_minute = cache_result(timeout=60)
-cache_for_hour = cache_result(timeout=3600)
-cache_for_day = cache_result(timeout=86400)
+cache_for_minute = lambda prefix: cache_result(prefix=prefix, timeout=60)
+cache_for_hour = lambda prefix: cache_result(prefix=prefix, timeout=3600)
+cache_for_day = lambda prefix: cache_result(prefix=prefix, timeout=86400)

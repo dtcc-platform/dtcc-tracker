@@ -240,25 +240,31 @@ REDIS_DB = config('REDIS_DB', default=0, cast=int)
 REDIS_PASSWORD = config('REDIS_PASSWORD', default=None)
 
 # Cache Configuration
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}',
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            'PARSER_CLASS': 'redis.connection.HiredisParser',
-            'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
-            'CONNECTION_POOL_CLASS_KWARGS': {
-                'max_connections': 50,
-                'timeout': 20,
-            },
-            'MAX_CONNECTIONS': 1000,
-            'PICKLE_VERSION': -1,
-        },
-        'KEY_PREFIX': 'dtcc',
-        'TIMEOUT': config('CACHE_TTL', default=300, cast=int),  # Default 5 minutes
+# Use dummy cache for local development when Redis is not available
+# For production, use Redis cache
+if DEBUG:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': f'redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}',
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'CONNECTION_POOL_KWARGS': {
+                    'max_connections': 50,
+                    'socket_connect_timeout': 5,
+                    'socket_timeout': 5,
+                },
+            },
+            'KEY_PREFIX': 'dtcc',
+            'TIMEOUT': config('CACHE_TTL', default=300, cast=int),  # Default 5 minutes
+        }
+    }
 
 # Session Cache (use Redis for sessions)
 SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
