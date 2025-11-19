@@ -19,7 +19,39 @@ jobs:
         HOSTNAME: ${{ secrets.EC2_HOST }}
         USER_NAME: ${{ secrets.EC2_USER }}
       run: |
+        # Debug: Check if secrets are set
+        echo "Checking secrets..."
+        if [ -z "$HOSTNAME" ]; then
+          echo "ERROR: EC2_HOST secret is not set"
+          exit 1
+        fi
+        if [ -z "$USER_NAME" ]; then
+          echo "ERROR: EC2_USER secret is not set"
+          exit 1
+        fi
+        if [ -z "$PRIVATE_KEY" ]; then
+          echo "ERROR: EC2_SSH_PRIVATE_KEY secret is not set"
+          exit 1
+        fi
+        echo "User: $USER_NAME"
+        echo "Host: $HOSTNAME"
+        echo "Key length: ${#PRIVATE_KEY} characters"
+
+        # Create private key file
         echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+
+        # Test SSH connection first
+        echo "Testing SSH connection..."
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i private_key ${USER_NAME}@${HOSTNAME} 'echo "SSH connection successful"' || {
+          echo "ERROR: SSH connection failed"
+          echo "Please check:"
+          echo "1. EC2 instance is running"
+          echo "2. Security group allows port 22 from GitHub Actions IPs"
+          echo "3. Private key matches the key pair on EC2"
+          exit 1
+        }
+
+        # If we get here, SSH works - proceed with deployment
         ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
           # Navigate to app directory
           cd /home/ubuntu/dtcc-tracker || mkdir -p /home/ubuntu/dtcc-tracker
