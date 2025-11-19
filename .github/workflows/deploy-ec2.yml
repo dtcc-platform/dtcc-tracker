@@ -53,6 +53,44 @@ jobs:
 
         # If we get here, SSH works - proceed with deployment
         ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
+          # ================================================
+          # INSTALL PREREQUISITES
+          # ================================================
+          echo "=========================================="
+          echo "Installing Prerequisites"
+          echo "=========================================="
+
+          # Update package list
+          sudo apt-get update
+
+          # Install Python 3.11 if not installed
+          if ! command -v python3.11 &> /dev/null; then
+            echo "Installing Python 3.11..."
+            sudo apt-get install -y python3.11 python3.11-venv python3-pip
+          else
+            echo "Python 3.11 already installed"
+          fi
+
+          # Install Node.js and npm if not installed
+          if ! command -v node &> /dev/null; then
+            echo "Installing Node.js..."
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+          else
+            echo "Node.js already installed"
+          fi
+
+          # Install git if not installed
+          if ! command -v git &> /dev/null; then
+            echo "Installing git..."
+            sudo apt-get install -y git
+          else
+            echo "git already installed"
+          fi
+
+          echo "Prerequisites installation complete"
+          echo ""
+
           # Navigate to app directory
           cd /home/ubuntu/dtcc-tracker || mkdir -p /home/ubuntu/dtcc-tracker
           cd /home/ubuntu/dtcc-tracker
