@@ -1,0 +1,144 @@
+# GitHub Dependabot configuration for automated dependency updates
+# Monitors both security vulnerabilities and version updates
+version: 2
+updates:
+  # Python/Django Backend Dependencies
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "05:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    groups:
+      # Group Django and related packages
+      django-ecosystem:
+        patterns:
+          - "django*"
+          - "djangorestframework*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group AWS SDK updates
+      aws-sdk:
+        patterns:
+          - "boto3"
+          - "botocore"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group testing tools
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "black"
+          - "flake8"
+          - "coverage"
+          - "safety"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Ignore major Django updates (need careful migration testing)
+      - dependency-name: "Django"
+        update-types: ["version-update:semver-major"]
+      # Ignore major Celery updates (may have breaking changes)
+      - dependency-name: "celery"
+        update-types: ["version-update:semver-major"]
+      # Ignore major Django REST framework updates
+      - dependency-name: "djangorestframework"
+        update-types: ["version-update:semver-major"]
+    labels:
+      - "dependencies"
+      - "python"
+      - "backend"
+    commit-message:
+      prefix: "chore(deps-backend)"
+      include: "scope"
+
+  # Frontend npm Dependencies
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"  # Staggered from backend updates
+      time: "05:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    groups:
+      # Group React ecosystem updates
+      react-ecosystem:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group TypeScript type definitions
+      type-definitions:
+        patterns:
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group dev dependencies
+      dev-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group ESLint related packages
+      linting:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+          - "prettier*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Be cautious with major Next.js updates
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+      # Ignore TypeScript major updates (may have breaking changes)
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+    labels:
+      - "dependencies"
+      - "javascript"
+      - "frontend"
+    commit-message:
+      prefix: "chore(deps-frontend)"
+      include: "scope"
+    # Enable version updates for npm
+    versioning-strategy: "increase"
+
+  # GitHub Actions Dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"  # Staggered from other updates
+      time: "05:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    groups:
+      # Group all GitHub Actions updates
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci/cd"
+    commit-message:
+      prefix: "chore(deps-actions)"
+      include: "scope"
+
+# Note: Security updates are automatically enabled for all ecosystems
+# They run daily and bypass schedule/limit restrictions for critical fixes
