@@ -1,0 +1,232 @@
+name: Deploy to AWS EC2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy to EC2
+      env:
+        PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        HOSTNAME: ${{ secrets.EC2_HOST }}
+        USER_NAME: ${{ secrets.EC2_USER }}
+      run: |
+        # Debug: Check if secrets are set
+        echo "Checking secrets..."
+        if [ -z "$HOSTNAME" ]; then
+          echo "ERROR: EC2_HOST secret is not set"
+          exit 1
+        fi
+        if [ -z "$USER_NAME" ]; then
+          echo "ERROR: EC2_USER secret is not set"
+          exit 1
+        fi
+        if [ -z "$PRIVATE_KEY" ]; then
+          echo "ERROR: EC2_SSH_PRIVATE_KEY secret is not set"
+          exit 1
+        fi
+        echo "User: $USER_NAME"
+        echo "Host: $HOSTNAME"
+        echo "Key length: ${#PRIVATE_KEY} characters"
+
+        # Create private key file
+        echo "$PRIVATE_KEY" > private_key && chmod 600 private_key
+
+        # Test SSH connection first
+        echo "Testing SSH connection..."
+        ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -i private_key ${USER_NAME}@${HOSTNAME} 'echo "SSH connection successful"' || {
+          echo "ERROR: SSH connection failed"
+          echo "Please check:"
+          echo "1. EC2 instance is running"
+          echo "2. Security group allows port 22 from GitHub Actions IPs"
+          echo "3. Private key matches the key pair on EC2"
+          exit 1
+        }
+
+        # If we get here, SSH works - proceed with deployment
+        ssh -o StrictHostKeyChecking=no -i private_key ${USER_NAME}@${HOSTNAME} '
+          # ================================================
+          # INSTALL PREREQUISITES
+          # ================================================
+          echo "=========================================="
+          echo "Installing Prerequisites"
+          echo "=========================================="
+
+          # Update package list
+          sudo apt-get update
+
+          # Install Python 3.11 if not installed
+          if ! command -v python3.11 &> /dev/null; then
+            echo "Installing Python 3.11..."
+            sudo apt-get install -y python3.11 python3.11-venv python3-pip
+          else
+            echo "Python 3.11 already installed"
+          fi
+
+          # Install Node.js and npm if not installed
+          if ! command -v node &> /dev/null; then
+            echo "Installing Node.js..."
+            curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+            sudo apt-get install -y nodejs
+          else
+            echo "Node.js already installed"
+          fi
+
+          # Install git if not installed
+          if ! command -v git &> /dev/null; then
+            echo "Installing git..."
+            sudo apt-get install -y git
+          else
+            echo "git already installed"
+          fi
+
+          echo "Prerequisites installation complete"
+          echo ""
+
+          # Navigate to app directory
+          cd /home/ubuntu/dtcc-tracker || mkdir -p /home/ubuntu/dtcc-tracker
+          cd /home/ubuntu/dtcc-tracker
+
+          # Pull latest code
+          if [ -d ".git" ]; then
+            git pull origin main
+          else
+            git clone https://github.com/${{ github.repository }}.git .
+          fi
+
+          # ================================================
+          # BACKEND DEPLOYMENT
+          # ================================================
+          echo "=========================================="
+          echo "Deploying Backend (Django)"
+          echo "=========================================="
+
+          cd backend
+
+          # Install/update Python dependencies
+          python3.11 -m venv venv || python3 -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+          # Stop existing backend service
+          sudo systemctl stop dtcc-tracker-backend || true
+
+          # Copy backend service file if it doesnt exist
+          if [ ! -f "/etc/systemd/system/dtcc-tracker-backend.service" ]; then
+            sudo cp dtcc-tracker-backend.service /etc/systemd/system/
+            sudo systemctl daemon-reload
+          fi
+
+          # Set environment variables for backend
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" > .env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+
+          # Run database migrations
+          python manage.py migrate --no-input
+
+          # Collect static files
+          python manage.py collectstatic --no-input
+
+          # Start backend service
+          sudo systemctl start dtcc-tracker-backend
+          sudo systemctl enable dtcc-tracker-backend
+
+          # Check backend status
+          sudo systemctl status dtcc-tracker-backend --no-pager
+
+          deactivate
+          cd ..
+
+          # ================================================
+          # FRONTEND DEPLOYMENT
+          # ================================================
+          echo "=========================================="
+          echo "Deploying Frontend (Next.js)"
+          echo "=========================================="
+
+          cd frontend
+
+          # Install/update Node dependencies
+          npm ci
+
+          # Build Next.js application
+          npm run build
+
+          # Stop existing frontend service
+          sudo systemctl stop dtcc-tracker-frontend || true
+
+          # Copy frontend service file if it doesnt exist
+          if [ ! -f "/etc/systemd/system/dtcc-tracker-frontend.service" ]; then
+            sudo cp dtcc-tracker-frontend.service /etc/systemd/system/
+            sudo systemctl daemon-reload
+          fi
+
+          # Set environment variables for frontend
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" > .env.production.local
+
+          # Start frontend service
+          sudo systemctl start dtcc-tracker-frontend
+          sudo systemctl enable dtcc-tracker-frontend
+
+          # Check frontend status
+          sudo systemctl status dtcc-tracker-frontend --no-pager
+
+          cd ..
+
+          # ================================================
+          # NGINX DEPLOYMENT
+          # ================================================
+          echo "=========================================="
+          echo "Configuring Nginx Reverse Proxy"
+          echo "=========================================="
+
+          # Install nginx if not already installed
+          if ! command -v nginx &> /dev/null; then
+            echo "Installing Nginx..."
+            sudo apt-get update
+            sudo apt-get install -y nginx
+          else
+            echo "Nginx already installed"
+          fi
+
+          # Copy nginx configuration
+          sudo cp nginx/dtcc-tracker.conf /etc/nginx/sites-available/dtcc-tracker.conf
+
+          # Create symlink if it doesnt exist
+          if [ ! -f "/etc/nginx/sites-enabled/dtcc-tracker.conf" ]; then
+            sudo ln -s /etc/nginx/sites-available/dtcc-tracker.conf /etc/nginx/sites-enabled/
+          fi
+
+          # Remove default nginx site if it exists
+          sudo rm -f /etc/nginx/sites-enabled/default
+
+          # Create directory for certbot challenges
+          sudo mkdir -p /var/www/certbot
+
+          # Test nginx configuration
+          sudo nginx -t
+
+          # Reload nginx
+          sudo systemctl reload nginx
+          sudo systemctl enable nginx
+
+          # Check nginx status
+          sudo systemctl status nginx --no-pager
+
+          # ================================================
+          # DEPLOYMENT COMPLETE
+          # ================================================
+          echo "=========================================="
+          echo "Deployment Complete!"
+          echo "=========================================="
+          echo "Backend: Running on localhost:8000 (via Nginx)"
+          echo "Frontend: Running on localhost:3000 (via Nginx)"
+          echo "Nginx: Serving on port 80 (HTTP) and 443 (HTTPS)"
+        '
