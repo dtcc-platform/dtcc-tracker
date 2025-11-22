@@ -18,7 +18,6 @@ export async function POST(req: NextRequest) {
         });
 
         const data = await djangoResponse.json();
-        console.log(data)
         if (djangoResponse.ok) {
             return NextResponse.json({ is_superuser: data.is_superuser, username: data.username, valid: true, message: "Token is valid" }, { status: 200 });
         } else {

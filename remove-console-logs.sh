@@ -15,6 +15,8 @@ files=(
   "frontend/src/app/contexts/RefreshContext.tsx"
   "frontend/src/app/contexts/AuthContext.tsx"
   "frontend/src/app/admin/page.tsx"
+  "frontend/src/app/api/auth/login/route.ts"
+  "frontend/src/app/api/papers/route.ts"
 )
 
 for file in "${files[@]}"; do

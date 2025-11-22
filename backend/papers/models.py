@@ -3,17 +3,20 @@ from django.contrib.auth.models import User
 
 class Project(models.Model):
     project_name = models.CharField(max_length=255)
-    status = models.CharField(max_length=50)
+    status = models.CharField(max_length=50, db_index=True)
     pi = models.CharField(max_length=255, null=True, blank=True)
     funding_body = models.CharField(max_length=255, null=True, blank=True)
     documents = models.CharField(max_length=255, null=True, blank=True)
     additional_authors = models.JSONField(default=list)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
     amount = models.CharField(max_length=255, default="0")
-
 
     class Meta:
         unique_together = ('user', 'project_name')
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['project_name']),
+        ]
     def __str__(self):
         return self.project_name
 

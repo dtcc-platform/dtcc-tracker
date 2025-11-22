@@ -10,8 +10,36 @@ const nextConfig: NextConfig = {
   },
 
   eslint: {
-    ignoreDuringBuilds: true, 
+    ignoreDuringBuilds: false, // Enable ESLint during builds
   },
+
+  // Image optimization
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+  },
+
+  // Compiler optimizations
+  compiler: {
+    // Remove console logs in production
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+
+  // Enable SWC minification for better performance
+  swcMinify: true,
+
+  // Optimize CSS
+  experimental: {
+    optimizeCss: true,
+  },
+
+  // Reduce bundle size by excluding sourcemaps in production
+  productionBrowserSourceMaps: false,
+
+  // Compression
+  compress: true,
 };
 
 export default nextConfig;

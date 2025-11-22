@@ -394,10 +394,10 @@ def forgot_password(request):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
 
         # 4. Construct the reset URL
-        #    This should match whatever route your front-end or Django app 
+        #    This should match whatever route your front-end or Django app
         #    handles to actually reset the password.
-        #    Example: "https://yourfrontend.com/reset/<uid>/<token>"
-        reset_link = f"https://yourfrontend.com/reset/{uid}/{token}"
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        reset_link = f"{frontend_url}/reset/{uid}/{token}"
 
         # 5. Build an email message that includes the username and the reset link
         subject = "Password Reset Request"
@@ -646,9 +646,12 @@ class SuperuserPaperListView(RateLimitMixin, APIView):
             papers = papers.filter(submission_year__isnull=False)
         elif submitted_only == 'false':
             papers = papers.filter(submission_year__isnull=True)
-        
-        serializer = SuperuserPaperSerializer(papers, many=True, context={'request': request})
-        return Response(serializer.data)
+
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        paginated_papers = paginator.paginate_queryset(papers, request)
+        serializer = SuperuserPaperSerializer(paginated_papers, many=True, context={'request': request})
+        return paginator.get_paginated_response(serializer.data)
 
 class SuperuserSubmissionStatsView(RateLimitMixin, APIView):
     """
@@ -665,16 +668,23 @@ class SuperuserSubmissionStatsView(RateLimitMixin, APIView):
         
         # Only look at master copies
         master_papers = Paper.objects.filter(user=request.user, is_master_copy=True).select_related('user')
-        
+
+        # Use a single aggregation query for counts
+        from django.db.models import Count, Q
+        aggregated_stats = master_papers.aggregate(
+            total=Count('id'),
+            submitted=Count('id', filter=Q(submission_year__isnull=False)),
+            not_submitted=Count('id', filter=Q(submission_year__isnull=True))
+        )
+
         stats = {
-            'total_papers': master_papers.count(),
-            'submitted_papers': master_papers.filter(submission_year__isnull=False).count(),
-            'not_submitted_papers': master_papers.filter(submission_year__isnull=True).count(),
+            'total_papers': aggregated_stats['total'],
+            'submitted_papers': aggregated_stats['submitted'],
+            'not_submitted_papers': aggregated_stats['not_submitted'],
             'by_year': {}
         }
-        
+
         # Group by submission year
-        from django.db.models import Count
         yearly_stats = master_papers.filter(
             submission_year__isnull=False
         ).values('submission_year').annotate(
@@ -734,11 +744,15 @@ class ProjectListCreateView(RateLimitMixin, APIView):
         otherwise fetch only projects belonging to this user.
         """
         if request.user.is_superuser:
-            projects = Project.objects.all()
+            projects = Project.objects.select_related('user').all()
         else:
-            projects = Project.objects.filter(user=request.user)
-        serializer = ProjectSerializer(projects, many=True)
-        return Response(serializer.data)
+            projects = Project.objects.select_related('user').filter(user=request.user)
+
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        paginated_projects = paginator.paginate_queryset(projects, request)
+        serializer = ProjectSerializer(paginated_projects, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
         """Create a new project and associate it with the authenticated user."""

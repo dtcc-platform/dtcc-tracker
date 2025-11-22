@@ -17,11 +17,27 @@ export async function POST(req: Request) {
     }
 
     const data = await djangoResponse.json();
-    console.log(data)
-    const is_superuser = data.is_superuser;
-    const authToken = data.access_token; // Assuming Django returns a JWT token
-    const refreshToken = data.refresh_token; // Assuming Django returns a refresh token
-    return NextResponse.json({ token: authToken, refreshToken:refreshToken, user: data.user.username, is_superuser: data.user.is_superuser }, { status: 200 });
+
+    // Extract Set-Cookie headers from Django response to forward them
+    const setCookieHeaders = djangoResponse.headers.get('set-cookie');
+
+    // Create response with user data (no tokens in body)
+    const response = NextResponse.json({
+      user: data.user.username,
+      is_superuser: data.user.is_superuser,
+      message: data.message
+    }, { status: 200 });
+
+    // Forward the httpOnly cookies from Django to the client
+    if (setCookieHeaders) {
+      // Parse and forward each cookie from Django response
+      const cookies = setCookieHeaders.split(', ');
+      cookies.forEach(cookie => {
+        response.headers.append('Set-Cookie', cookie);
+      });
+    }
+
+    return response;
   } catch (error) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

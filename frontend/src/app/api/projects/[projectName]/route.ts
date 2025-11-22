@@ -5,10 +5,10 @@ export async function DELETE(request: Request, props: { params: Promise<{ projec
     const params = await props.params;
     const authHeader = request.headers.get("Authorization");
     const { projectName} = params;
-    console.log(projectName)
+    const encodedProjectName = encodeURIComponent(projectName);
 
     try {
-        const response = await fetch(`${BASE_URL}projects/delete/${projectName}/`, {
+        const response = await fetch(`${BASE_URL}projects/delete/${encodedProjectName}/`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -31,11 +31,11 @@ export async function PUT(request: Request, props: { params: Promise<{ projectNa
     const params = await props.params;
     const authHeader = request.headers.get("Authorization");
     const { projectName } = params;
-    console.log(`Updating Project with Name: ${projectName}`);
+    const encodedProjectName = encodeURIComponent(projectName);
 
     try {
         const requestData = await request.json(); // Parse request body
-        const response = await fetch(`${BASE_URL}projects/update/${projectName}/`, {
+        const response = await fetch(`${BASE_URL}projects/update/${encodedProjectName}/`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -46,15 +46,11 @@ export async function PUT(request: Request, props: { params: Promise<{ projectNa
 
         if (!response.ok) {
             const errorData = await response.json();
-              if (response.status === 400 && errorData.error === "Project already exists") {
-                  console.log('Paper exists with this doi')
-                  return NextResponse.json({error: "Project already exists"}, {status: 500})
-              } else {
-                  console.log("An error occurred. Please check your input.");
-                  console.log(errorData)
-              }
-            return NextResponse.json(errorData);
-          }
+            if (response.status === 400 && errorData.error === "Project already exists") {
+                return NextResponse.json({error: "Project already exists"}, {status: 409}) // Use 409 Conflict instead of 500
+            }
+            return NextResponse.json(errorData, {status: response.status});
+        }
 
         const data = await response.json();
         return NextResponse.json(data, { status: 200 });

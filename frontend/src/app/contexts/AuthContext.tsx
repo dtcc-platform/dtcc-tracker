@@ -70,8 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const data = await response.json();
       // No longer storing tokens in localStorage - they're in httpOnly cookies
-      setIsSuperUser(data.user.is_superuser);
-      setUser(data.user.username);
+      setIsSuperUser(data.is_superuser);
+      setUser(data.user);
       setIsAuthenticated(true);
       return true;
     } catch (error) {
