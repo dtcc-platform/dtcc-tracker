@@ -5,10 +5,37 @@ from rest_framework_simplejwt.tokens import UntypedToken
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.exceptions import ValidationError
 from django.contrib.auth.models import User
+from django.core.validators import RegexValidator
+import re
+import bleach
 
 class ProjectSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     submitted_by = serializers.ReadOnlyField(source='user.username')
+
+    # Add field-level validators
+    project_name = serializers.CharField(
+        max_length=255,
+        min_length=3,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-Z0-9\s\-._]+$',
+                message='Project name can only contain letters, numbers, spaces, hyphens, dots, and underscores.'
+            )
+        ]
+    )
+
+    status = serializers.ChoiceField(
+        choices=['Draft', 'Submitted', 'Approved'],
+        error_messages={'invalid_choice': 'Status must be Draft, Submitted, or Approved'}
+    )
+
+    funding_body = serializers.ChoiceField(
+        choices=['EU', 'VR', 'Vinnova', 'Formas', 'Trafikverket', 'Energimyndigheten'],
+        required=False,
+        allow_blank=True,
+        error_messages={'invalid_choice': 'Invalid funding body selected'}
+    )
 
     class Meta:
         model = Project
@@ -16,6 +43,31 @@ class ProjectSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'id': {'read_only': True},
         }
+
+    def validate_project_name(self, value):
+        """Additional validation for project name"""
+        # Sanitize input to prevent XSS
+        cleaned_value = bleach.clean(value, tags=[], strip=True)
+        if cleaned_value != value:
+            raise ValidationError("Project name contains invalid HTML/script content")
+        return value
+
+    def validate_additional_authors(self, value):
+        """Validate additional authors list"""
+        if value and isinstance(value, list):
+            if len(value) > 50:
+                raise ValidationError("Too many additional authors (max 50)")
+            # Sanitize each author name
+            cleaned_authors = []
+            for author in value:
+                if not isinstance(author, str):
+                    raise ValidationError("Each author must be a string")
+                cleaned = bleach.clean(author, tags=[], strip=True)
+                if len(cleaned) > 100:
+                    raise ValidationError("Author name too long (max 100 characters)")
+                cleaned_authors.append(cleaned)
+            return cleaned_authors
+        return value
 
 
 
@@ -25,7 +77,80 @@ from django.contrib.auth.models import User
 class PaperSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
     submitted_by = serializers.ReadOnlyField(source='user.username')
-    
+
+    # DOI validation
+    doi = serializers.CharField(
+        max_length=255,
+        validators=[
+            RegexValidator(
+                regex=r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$',
+                message='Invalid DOI format. DOI should start with "10." followed by publisher code.',
+                flags=re.IGNORECASE
+            )
+        ]
+    )
+
+    # Title validation
+    title = serializers.CharField(
+        max_length=500,
+        min_length=3,
+        error_messages={
+            'max_length': 'Title too long (max 500 characters)',
+            'min_length': 'Title too short (min 3 characters)'
+        }
+    )
+
+    # Author name validation
+    author_name = serializers.CharField(
+        max_length=255,
+        min_length=2,
+        validators=[
+            RegexValidator(
+                regex=r'^[a-zA-Z\s\-.\',]+$',
+                message='Author name can only contain letters, spaces, hyphens, dots, commas and apostrophes.'
+            )
+        ]
+    )
+
+    # Journal validation
+    journal = serializers.CharField(
+        max_length=255,
+        min_length=2
+    )
+
+    # Date validation
+    date = serializers.DateField(
+        input_formats=['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y'],
+        error_messages={
+            'invalid': 'Date must be in format YYYY-MM-DD, DD/MM/YYYY, or MM/DD/YYYY'
+        }
+    )
+
+    # Publication type validation
+    publication_type = serializers.ChoiceField(
+        choices=['Article in journal', 'Monograph', 'Conference proceedings', 'Other'],
+        error_messages={'invalid_choice': 'Invalid publication type'}
+    )
+
+    # Milestone project validation
+    milestone_project = serializers.ChoiceField(
+        choices=[
+            'Crowd movement',
+            'Digital twins for circularity',
+            'Data models for digital twin cities',
+            'Twinable',
+            'Urban environmental comfort design',
+            'Digital twin of construction site',
+            'Design and data',
+            '4D digital twin for underground and natural hazards',
+            'Twin re-fab',
+            'Digital twin platform',
+            'Other'
+        ],
+        required=False,
+        allow_blank=True
+    )
+
     class Meta:
         model = Paper
         fields = '__all__'
@@ -33,6 +158,50 @@ class PaperSerializer(serializers.ModelSerializer):
             'submission_year': {'read_only': True},  # Only superuser can modify via special endpoints
             'is_master_copy': {'read_only': True},
         }
+
+    def validate_doi(self, value):
+        """Additional DOI validation and sanitization"""
+        # Remove any potential XSS
+        cleaned_value = bleach.clean(value, tags=[], strip=True)
+        if cleaned_value != value:
+            raise ValidationError("DOI contains invalid HTML/script content")
+        # Normalize DOI format
+        return value.strip().lower()
+
+    def validate_title(self, value):
+        """Sanitize title to prevent XSS"""
+        cleaned_value = bleach.clean(value, tags=[], strip=True)
+        if cleaned_value != value:
+            raise ValidationError("Title contains invalid HTML/script content")
+        return cleaned_value
+
+    def validate_author_name(self, value):
+        """Sanitize author name"""
+        cleaned_value = bleach.clean(value, tags=[], strip=True)
+        if cleaned_value != value:
+            raise ValidationError("Author name contains invalid HTML/script content")
+        return cleaned_value
+
+    def validate_journal(self, value):
+        """Sanitize journal name"""
+        cleaned_value = bleach.clean(value, tags=[], strip=True)
+        return cleaned_value
+
+    def validate_additional_authors(self, value):
+        """Validate additional authors list"""
+        if value and isinstance(value, list):
+            if len(value) > 100:
+                raise ValidationError("Too many additional authors (max 100)")
+            cleaned_authors = []
+            for author in value:
+                if not isinstance(author, str):
+                    raise ValidationError("Each author must be a string")
+                cleaned = bleach.clean(author, tags=[], strip=True)
+                if len(cleaned) > 100:
+                    raise ValidationError("Author name too long (max 100 characters)")
+                cleaned_authors.append(cleaned)
+            return cleaned_authors
+        return value
     
     def create(self, validated_data):
         request = self.context.get('request')
@@ -143,11 +312,14 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         # You can customize which fields to expose
         fields = [
-            'id', 'username', 'email', 'is_superuser', 'is_staff', 
+            'id', 'username', 'email', 'is_superuser', 'is_staff',
             'password'
         ]
-        # Make 'id' read-only and possibly exclude 'password' from being read back
+        # Make 'id' read-only and password write-only for security
         read_only_fields = ['id']
+        extra_kwargs = {
+            'password': {'write_only': True}  # Password should never be exposed in responses
+        }
 
     # By default, if you want to handle password creation or updating properly,
     # you need to override how password is set so it’s hashed:

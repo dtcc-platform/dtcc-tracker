@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 interface AuthContextType {
@@ -32,21 +32,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        const token = localStorage.getItem("authToken");
-        if (!token) {
-          // Not logged in, redirect to login if they are on a protected route
-          setUser(null);
-          setIsAuthenticated(false);
-          router.push("/login");
-          return;
-        }
-
-        // Otherwise, verify token with the backend
-        const response = await fetch("/api/auth/status", {
+        // Verify authentication status with the backend using cookies
+        const response = await fetch("/api/auth/token/verify/", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-          credentials: "include",
+          credentials: "include", // Include cookies with the request
         });
         if (response.ok) {
           const data = await response.json();
@@ -65,13 +55,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkAuth();
   }, [pathname, router]);
 
-  const login = async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string) => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
-        credentials: "include",
+        credentials: "include", // Important: include cookies
       });
 
       if (!response.ok) {
@@ -79,33 +69,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const data = await response.json();
-      localStorage.setItem("authToken", data.token);
-      localStorage.setItem("refreshToken", data.refreshToken);
-      setIsSuperUser(data.is_superuser);
-      setUser(data.user);
+      // No longer storing tokens in localStorage - they're in httpOnly cookies
+      setIsSuperUser(data.user.is_superuser);
+      setUser(data.user.username);
       setIsAuthenticated(true);
       return true;
     } catch (error) {
-      console.error("Login error:", error);
       return false;
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      // Call logout endpoint to clear httpOnly cookies
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
       setUser(null);
       setIsAuthenticated(false);
+      setIsSuperUser(false);
+      // Clear any leftover localStorage items from old implementation
       localStorage.removeItem("authToken");
       localStorage.removeItem("refreshToken");
       router.push("/login");
     } catch (error) {
-      console.error("Logout failed:", error);
+      // Logout failed silently - still clear local state
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsSuperUser(false);
+      router.push("/login");
     }
-  };
+  }, [router]);
+
+  const contextValue = useMemo(
+    () => ({ user, isAuthenticated, isSuperUser, login, logout }),
+    [user, isAuthenticated, isSuperUser, login, logout]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isSuperUser, login, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

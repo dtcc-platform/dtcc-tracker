@@ -1,0 +1,67 @@
+[Unit]
+Description=DTCC Tracker Frontend Next.js Service
+Documentation=https://github.com/your-repo/dtcc-tracker
+Requires=network-online.target dtcc-backend.service
+After=network-online.target dtcc-backend.service
+Before=nginx.service
+PartOf=dtcc-tracker.target
+
+[Service]
+Type=simple
+User=dtcc
+Group=dtcc
+
+# Working directory and environment
+WorkingDirectory=/var/www/dtcc-tracker/frontend
+Environment="NODE_ENV=production"
+Environment="PORT=3000"
+Environment="PATH=/usr/bin:/bin"
+EnvironmentFile=-/var/www/dtcc-tracker/frontend/.env.local
+
+# Next.js production server
+ExecStartPre=/usr/bin/npm run build
+ExecStart=/usr/bin/npm start
+
+# Process management
+Restart=always
+RestartSec=10s
+StartLimitBurst=3
+StartLimitIntervalSec=60
+TimeoutStartSec=60
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Resource limits
+CPUWeight=150
+MemoryMax=1G
+MemoryHigh=768M
+TasksMax=100
+LimitNOFILE=65536
+Nice=0
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/www/dtcc-tracker/frontend/.next /tmp
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallFilter=@system-service
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# Logging
+SyslogIdentifier=dtcc-frontend
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

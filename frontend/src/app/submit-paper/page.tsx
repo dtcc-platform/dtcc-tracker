@@ -1,12 +1,14 @@
 'use client'
-import { CSSProperties, useState } from 'react';
+import { CSSProperties, useState, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPaper, fetchDoiMetadata } from '../utils/api';
 import { Paper } from '../types/FixedTypes';
 import { useRefresh } from '@/app/contexts/RefreshContext';
-import PaperForm from '@/components/PaperForm';
 import { usePaperContext } from '../contexts/PaperContext';
 import { gradients, palette, shadows } from '@/app/theme';
+
+// Dynamic import for PaperForm component
+const PaperForm = lazy(() => import('@/components/PaperForm'));
 const formatDateToYYYYMMDD = (dateString: string): string => {
     if (!dateString) return '';
 
@@ -73,10 +75,8 @@ const InputPage: React.FC = () => {
     const handleSave = async () => {
         try {
             const response = await createPaper(paper);
-            console.log(response)
             if (response.error) {
                 if (response.error === ("DOI already exists")) {
-
                     setError("This DOI already exists."); // Set error message
                 }
             } else {
@@ -84,7 +84,6 @@ const InputPage: React.FC = () => {
                 router.push('/');
             }
         } catch (error) {
-            console.error('Error saving paper:', error);
             setError('An error occurred while saving.'); // Generic error
         }
     };
@@ -143,8 +142,6 @@ const InputPage: React.FC = () => {
                 router.push('/result');
             }
         } catch (error) {
-            console.error('Error retrieving DOI metadata:', error);
-
             // Create a paper with just the DOI so user can edit manually
             const failedPaper: Paper = {
                 authorName: '',
@@ -196,8 +193,6 @@ const InputPage: React.FC = () => {
                     failedDois.push(doi);
                 }
             } catch (error) {
-                console.error(`Error retrieving metadata for DOI ${doi}:`, error);
-
                 // Include the failed DOI as an empty paper for manual editing
                 const failedPaper: Paper = {
                     authorName: '',
@@ -216,8 +211,6 @@ const InputPage: React.FC = () => {
         // Always navigate to results page, even if some/all failed
         if (validPapers.length > 0) {
             setPapers(validPapers);
-            console.log("VALID PAPERS",validPapers)
-            console.log("FAILED DOIS",failedDois)
             // Set error messages for failed DOIs
             if (failedDois.length > 0) {
                 const errorMessages = failedDois.map(doi => `Failed to load metadata for DOI: ${doi}`);
@@ -226,9 +219,8 @@ const InputPage: React.FC = () => {
                 setDoiErrors([]); // Clear any previous errors
             }
 
-            
+
         } else {
-            console.error('No valid papers could be processed');
             setDoiErrors(['Failed to process any of the provided DOIs']);
         }
         router.push('/result');
@@ -237,26 +229,30 @@ const InputPage: React.FC = () => {
     if (manualInput) {
         return (
             <div style={pageWrapperStyle}>
-                <PaperForm
-                    authorName={paper.authorName}
-                    setAuthorName={(value) => handleChange('authorName', value)}
-                    doi={paper.doi}
-                    setDoi={(value) => handleChange('doi', value)}
-                    title={paper.title}
-                    setTitle={(value) => handleChange('title', value)}
-                    journal={paper.journal}
-                    setJournal={(value) => handleChange('journal', value)}
-                    date={paper.date}
-                    setDate={(value) => handleChange('date', value)}
-                    publicationType={paper.publicationType}
-                    setPublicationType={(value) => handleChange('publicationType', value)}
-                    milestoneProject={paper.milestoneProject || ''}
-                    setMilestoneProject={(value) => handleChange('milestoneProject', value)}
-                    additionalAuthors={paper.additionalAuthors}
-                    setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
-                    onSave={handleSave}
-                    onBack={handleBack}
-                />
+                <Suspense fallback={
+                    <div style={loadingStyle}>Loading form...</div>
+                }>
+                    <PaperForm
+                        authorName={paper.authorName}
+                        setAuthorName={(value) => handleChange('authorName', value)}
+                        doi={paper.doi}
+                        setDoi={(value) => handleChange('doi', value)}
+                        title={paper.title}
+                        setTitle={(value) => handleChange('title', value)}
+                        journal={paper.journal}
+                        setJournal={(value) => handleChange('journal', value)}
+                        date={paper.date}
+                        setDate={(value) => handleChange('date', value)}
+                        publicationType={paper.publicationType}
+                        setPublicationType={(value) => handleChange('publicationType', value)}
+                        milestoneProject={paper.milestoneProject || ''}
+                        setMilestoneProject={(value) => handleChange('milestoneProject', value)}
+                        additionalAuthors={paper.additionalAuthors}
+                        setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
+                        onSave={handleSave}
+                        onBack={handleBack}
+                    />
+                </Suspense>
             </div>
         );
     }
@@ -444,6 +440,13 @@ const primaryButtonStyle: CSSProperties = {
     fontWeight: 600,
     cursor: 'pointer',
     boxShadow: '0 20px 40px rgba(242, 176, 67, 0.32)',
+};
+
+const loadingStyle: CSSProperties = {
+    padding: '2rem',
+    textAlign: 'center',
+    color: palette.textMuted,
+    fontSize: '14px',
 };
 
 export default InputPage;

@@ -1,1 +1,47 @@
+# Environment files
+.env
+.env.local
+.env.production
 backend/.ebextensions/environment.config
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+backend/venv/
+*.sqlite3
+backend/db.sqlite3
+
+# Node
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+dist/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Secrets
+*.pem
+*.key
+*.cert
+
+# Coverage
+coverage/
+.coverage
+htmlcov/
+
+# Build files
+build/
+*.egg-info/

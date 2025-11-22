@@ -15,11 +15,15 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
 from django.urls import path, include
+from papers.health import health_check, simple_health_check
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('papers.urls')),  # Ensure this is correctly included
-
+    # Health check endpoints
+    path('api/health/', health_check, name='health_check'),
+    path('health/', simple_health_check, name='simple_health_check'),
+    # API versioning
+    path('api/v1/', include('papers.v1_urls')),  # Version 1 (current)
+    path('api/', include('papers.urls')),  # Legacy support (redirects to v1)
 ]

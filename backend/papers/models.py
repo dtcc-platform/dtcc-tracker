@@ -18,21 +18,26 @@ class Project(models.Model):
         return self.project_name
 
 class Paper(models.Model):
-    author_name = models.CharField(max_length=255)
-    doi = models.CharField(max_length=255)
+    author_name = models.CharField(max_length=255, db_index=True)
+    doi = models.CharField(max_length=255, db_index=True)
     title = models.CharField(max_length=255)
     journal = models.CharField(max_length=255)
     date = models.CharField(max_length=255)
     additional_authors = models.JSONField(default=list)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, db_index=True)
     publication_type = models.CharField(max_length=255, default="")
     milestone_project = models.CharField(max_length=255, default="", blank=True)
-    submission_year = models.IntegerField(null=True, blank=True)
+    submission_year = models.IntegerField(null=True, blank=True, db_index=True)
 
-    is_master_copy = models.BooleanField(default=False) 
+    is_master_copy = models.BooleanField(default=False, db_index=True)
 
-    class Meta: 
+    class Meta:
         unique_together = ('user', 'doi')
+        indexes = [
+            models.Index(fields=['doi', 'user']),
+            models.Index(fields=['is_master_copy', 'user']),
+            models.Index(fields=['submission_year', 'is_master_copy']),
+        ]
     def __str__(self):
         return self.doi
     

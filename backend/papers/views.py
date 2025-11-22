@@ -3,11 +3,15 @@ from urllib.parse import unquote
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.db import IntegrityError
+from django.core.cache import cache
+from django.views.decorators.cache import cache_page
 from .models import Paper, Project, ChatMessage
 from .serializers import PaperSerializer, ProjectSerializer, CustomTokenVerifySerializer, SuperuserPaperSerializer, UserSerializer
+from .cache_utils import CacheMixin, cache_result, invalidate_cache_pattern
 import requests
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import authenticate, login
@@ -20,18 +24,27 @@ from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework.permissions import IsAdminUser
+from django_ratelimit.decorators import ratelimit
+from .rate_limiting import RateLimitMixin, api_rate_limit
 import boto3
 import re
 from botocore.exceptions import ClientError
 
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class CustomTokenVerifyView(TokenVerifyView):
     serializer_class = CustomTokenVerifySerializer
 
-# Bedrock configuration
-BEDROCK_MODEL_ID = "meta.llama3-70b-instruct-v1:0"
-BEDROCK_REGION = "us-west-2"
+# Bedrock configuration - use environment variables
+from decouple import config
+BEDROCK_MODEL_ID = config('BEDROCK_MODEL_ID', default="meta.llama3-70b-instruct-v1:0")
+BEDROCK_REGION = config('BEDROCK_REGION', default="us-west-2")
 
-class ChatbotView(APIView):
+class ChatbotView(RateLimitMixin, APIView):
+    rate_limit_type = 'chat'
     permission_classes = [permissions.IsAuthenticated]
 
     def __init__(self):
@@ -131,7 +144,7 @@ class ChatbotView(APIView):
             
             model_response = json.loads(response["body"].read())
             bot_reply_raw = model_response["generation"]
-            print(f"Raw Bedrock response: {bot_reply_raw}")
+            # Debug logging removed for security
             
             # Extract JSON from the response
             def extract_json_from_response(response_text):
@@ -162,7 +175,7 @@ class ChatbotView(APIView):
                     {"error": "Could not parse response from AI model"},
                     status=500
                 )
-            print(f"Extracted JSON: {json_answer}")
+            # Debug logging removed for security
             
             try:
                 parsed = json.loads(json_answer)
@@ -209,7 +222,7 @@ class ChatbotView(APIView):
             })
 
         except Exception as e:
-            print(f"Error in chatbot: {e}")
+            # Log error securely without exposing sensitive details
             return Response(
                 {"error": "An error occurred while processing your request."},
                 status=500
@@ -252,7 +265,7 @@ class ChatbotView(APIView):
                 return {"success": False, "error": str(serializer.errors)}
                 
         except Exception as e:
-            print(f"Error registering project: {e}")
+            # Log error securely without exposing sensitive details
             return {"success": False, "error": "An unexpected error occurred"}
 
     def _register_paper(self, user, data):
@@ -307,7 +320,7 @@ class ChatbotView(APIView):
                 return {"success": False, "error": str(serializer.errors)}
                 
         except Exception as e:
-            print(f"Error registering paper: {e}")
+            # Log error securely without exposing sensitive details
             return {"success": False, "error": "An unexpected error occurred"}
     
     
@@ -338,18 +351,31 @@ class ChatbotView(APIView):
         ChatMessage.objects.filter(user=user).delete()
         return Response({"message": "Chat history cleared"})
     
-class ClearChatHistory(APIView):
+class ClearChatHistory(RateLimitMixin, APIView):
     def post(self, request):
         request.session.flush()  # Clears session, including chat history
         return Response({"message": "Cleared History successfully"})
     
-@csrf_exempt
+@ratelimit(key='ip', rate='3/m', method='POST')  # 3 attempts per minute per IP
 def forgot_password(request):
     """
     POST: { "email": "user@example.com" }
     """
     if request.method == "POST":
-        email = request.POST.get("email") or request.GET.get("email") or ""
+        # Only accept email from POST body, not GET parameters
+        try:
+            data = json.loads(request.body)
+            email = data.get("email", "")
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format"}, status=400)
+
+        # Validate email format
+        from django.core.validators import validate_email
+        from django.core.exceptions import ValidationError
+        try:
+            validate_email(email)
+        except ValidationError:
+            return JsonResponse({"error": "Invalid email format"}, status=400)
 
         # 1. Find the user by email
         try:
@@ -397,7 +423,7 @@ def forgot_password(request):
         })
 
     return JsonResponse({"error": "Method not allowed."}, status=405)
-@csrf_exempt  # Disable CSRF for API requests (use CORS instead for security)
+@ratelimit(key='ip', rate='5/m', method='POST')  # 5 login attempts per minute per IP
 def login_view(request):
     if request.method == "POST":
         try:
@@ -408,16 +434,37 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 refresh = RefreshToken.for_user(user)  # Generate JWT tokens
-                return JsonResponse({
-                    "access_token": str(refresh.access_token),
-                    "refresh_token": str(refresh),
+
+                # Create response without tokens in body
+                response = JsonResponse({
                     "user": {
                         "id": user.id,
                         "username": user.username,
                         "email": user.email,
                         "is_superuser": user.is_superuser
-                    }
+                    },
+                    "message": "Login successful"
                 }, status=200)
+
+                # Set tokens as httpOnly cookies
+                response.set_cookie(
+                    'access_token',
+                    str(refresh.access_token),
+                    max_age=settings.SIMPLE_JWT.get('ACCESS_TOKEN_LIFETIME').total_seconds(),
+                    httponly=True,
+                    secure=settings.SESSION_COOKIE_SECURE,  # True in production with HTTPS
+                    samesite='Lax'
+                )
+                response.set_cookie(
+                    'refresh_token',
+                    str(refresh),
+                    max_age=settings.SIMPLE_JWT.get('REFRESH_TOKEN_LIFETIME').total_seconds(),
+                    httponly=True,
+                    secure=settings.SESSION_COOKIE_SECURE,
+                    samesite='Lax'
+                )
+
+                return response
             else:
                 return JsonResponse({"error": "Invalid username or password"}, status=400)
         except json.JSONDecodeError:
@@ -425,26 +472,50 @@ def login_view(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+def logout_view(request):
+    """Logout view that clears httpOnly cookies"""
+    response = JsonResponse({"message": "Logout successful"}, status=200)
 
-class PaperListCreateView(APIView):
+    # Clear the cookies
+    response.delete_cookie('access_token')
+    response.delete_cookie('refresh_token')
+
+    return response
+
+
+class PaperListCreateView(RateLimitMixin, CacheMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
+    cache_key_prefix = 'papers'
+    cache_timeout = 300  # 5 minutes
 
     def get(self, request):
         """
         Regular users see only their own papers (excluding master copies)
         Superusers see their master copies for deduplication
         """
+        # Generate cache key
+        cache_key = self.get_list_cache_key(request)
+
+        # Try to get from cache
+        cached_data = cache.get(cache_key)
+        if cached_data is not None:
+            return Response(cached_data)
+
         if request.user.is_superuser:
-            papers = Paper.objects.filter(user=request.user, is_master_copy=True)
+            papers = Paper.objects.filter(user=request.user, is_master_copy=True).select_related('user')
         else:
-            papers = Paper.objects.filter(user=request.user, is_master_copy=False)
-        
+            papers = Paper.objects.filter(user=request.user, is_master_copy=False).select_related('user')
+
         serializer = PaperSerializer(papers, many=True)
+
+        # Cache the result
+        cache.set(cache_key, serializer.data, timeout=self.cache_timeout)
+
         return Response(serializer.data)
 
     def post(self, request):
         """
-        Create a new paper. 
+        Create a new paper.
         - Regular users: creates normal paper + auto-copies to superuser
         - Superusers: creates master copy directly
         """
@@ -452,6 +523,11 @@ class PaperListCreateView(APIView):
         if serializer.is_valid():
             try:
                 paper = serializer.save(user=request.user)
+
+                # Invalidate cache after creation
+                self.invalidate_list_cache()
+                invalidate_cache_pattern('papers:*')
+
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             except IntegrityError as e:
                 # Handle duplicate DOI
@@ -462,18 +538,18 @@ class PaperListCreateView(APIView):
                             {"error": "You already have this paper as a master copy", "field": "doi"},
                             status=status.HTTP_400_BAD_REQUEST,
                         )
-                
+
                 return Response(
                     {"error": "Duplicate DOI error", "field": "doi"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-        
+
         errors = serializer.errors.copy()
         if 'non_field_errors' in errors:
             errors['error'] = 'Duplicate key error'
         return Response(errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SuperuserPaperUpdateView(APIView):
+class SuperuserPaperUpdateView(RateLimitMixin, APIView):
     """
     Superuser can update submission year for papers
     """
@@ -496,7 +572,7 @@ class SuperuserPaperUpdateView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class SuperuserBulkUpdateView(APIView):
+class SuperuserBulkUpdateView(RateLimitMixin, APIView):
     """
     Bulk update submission year for multiple papers
     """
@@ -520,19 +596,18 @@ class SuperuserBulkUpdateView(APIView):
         
         # Get master copies belonging to this superuser
         papers = Paper.objects.filter(
-            id__in=paper_ids, 
-            user=request.user, 
+            id__in=paper_ids,
+            user=request.user,
             is_master_copy=True
+        ).select_related('user')
+        
+        # Collect all unique DOIs from the master papers
+        dois = papers.values_list('doi', flat=True).distinct()
+
+        # Update all papers with these DOIs in a single query
+        updated_count = Paper.objects.filter(doi__in=dois).update(
+            submission_year=submission_year
         )
-        
-        updated_count = 0
-        
-        for paper in papers:
-            # Update all papers with the same DOI
-            Paper.objects.filter(doi=paper.doi).update(
-                submission_year=submission_year
-            )
-            updated_count += Paper.objects.filter(doi=paper.doi).count()
         
         action = "submitted" if submission_year else "unsubmitted"
         message = f"Successfully {action} {updated_count} papers"
@@ -544,69 +619,8 @@ class SuperuserBulkUpdateView(APIView):
             "updated_papers": updated_count
         }, status=status.HTTP_200_OK)
 
-# Update your existing PaperListCreateView post method
-class PaperListCreateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):
-        """
-        Regular users see only their own papers (excluding master copies)
-        Superusers see their master copies
-        """
-        print(f"DEBUG: GET request from user: {request.user.username}, is_superuser: {request.user.is_superuser}")
-        
-        if request.user.is_superuser:
-            papers = Paper.objects.filter(user=request.user, is_master_copy=True)
-            print(f"DEBUG: Superuser query - found {papers.count()} master copies")
-        else:
-            papers = Paper.objects.filter(user=request.user, is_master_copy=False)
-            print(f"DEBUG: Regular user query - found {papers.count()} non-master papers")
-        
-        # Let's also show what papers exist for this user
-        all_user_papers = Paper.objects.filter(user=request.user)
-        print(f"DEBUG: All papers for user {request.user.username}: {all_user_papers.count()}")
-        for p in all_user_papers:
-            print(f"DEBUG: Paper ID: {p.id}, DOI: {p.doi}, is_master_copy: {p.is_master_copy}")
-        
-        serializer = PaperSerializer(papers, many=True)
-        return Response(serializer.data)
-
-    def post(self, request):
-        """Create a new paper and auto-copy to superuser."""
-        print(f"DEBUG: POST request received from user: {request.user.username}")
-        print(f"DEBUG: Request data: {request.data}")
-        
-        serializer = PaperSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            print("DEBUG: Serializer is valid")
-            try:
-                # Remove the explicit is_master_copy parameter - let the serializer handle it
-                paper = serializer.save(user=request.user)
-                print(f"DEBUG: Paper saved successfully: {paper.id}")
-                
-                # Let's also check what papers exist after creation
-                all_papers = Paper.objects.all()
-                print(f"DEBUG: Total papers in database: {all_papers.count()}")
-                for p in all_papers:
-                    print(f"DEBUG: Paper ID: {p.id}, DOI: {p.doi}, User: {p.user.username}, is_master_copy: {p.is_master_copy}")
-                
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            except IntegrityError as e:
-                print(f"DEBUG: IntegrityError occurred: {e}")
-                return Response(
-                    {"error": "Duplicate DOI error", "field": "doi"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        else:
-            print(f"DEBUG: Serializer is invalid: {serializer.errors}")
-            
-        errors = serializer.errors.copy()
-        print(errors)
-        if 'non_field_errors' in errors:
-            errors['error'] = 'Duplicate key error'
-        return Response(errors, status=status.HTTP_400_BAD_REQUEST)
-
-class SuperuserPaperListView(APIView):
+class SuperuserPaperListView(RateLimitMixin, APIView):
     """
     Superuser sees only their master copies (deduplicated view)
     """
@@ -620,7 +634,7 @@ class SuperuserPaperListView(APIView):
             )
         
         # Get only master copies belonging to this superuser
-        papers = Paper.objects.filter(user=request.user)
+        papers = Paper.objects.filter(user=request.user).select_related('user')
         
         # Optional filters
         submission_year = request.query_params.get('submission_year')
@@ -636,7 +650,7 @@ class SuperuserPaperListView(APIView):
         serializer = SuperuserPaperSerializer(papers, many=True, context={'request': request})
         return Response(serializer.data)
 
-class SuperuserSubmissionStatsView(APIView):
+class SuperuserSubmissionStatsView(RateLimitMixin, APIView):
     """
     Get submission statistics
     """
@@ -650,7 +664,7 @@ class SuperuserSubmissionStatsView(APIView):
             )
         
         # Only look at master copies
-        master_papers = Paper.objects.filter(user=request.user, is_master_copy=True)
+        master_papers = Paper.objects.filter(user=request.user, is_master_copy=True).select_related('user')
         
         stats = {
             'total_papers': master_papers.count(),
@@ -673,7 +687,7 @@ class SuperuserSubmissionStatsView(APIView):
         
         return Response(stats)
 
-class PaperDeleteView(APIView):
+class PaperDeleteView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, pk):
@@ -685,7 +699,7 @@ class PaperDeleteView(APIView):
         paper.delete()
         return JsonResponse({"message": "Paper deleted successfully"}, status=200)
 
-class PaperUpdateView(APIView):
+class PaperUpdateView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def put(self, request, pk):
@@ -711,7 +725,7 @@ class PaperUpdateView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ProjectListCreateView(APIView):
+class ProjectListCreateView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
@@ -743,7 +757,7 @@ class ProjectListCreateView(APIView):
 
 
 
-class ProjectDeleteView(APIView):
+class ProjectDeleteView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, pk):
@@ -761,7 +775,7 @@ class ProjectDeleteView(APIView):
         project.delete()
         return JsonResponse({"message": "Project deleted successfully"}, status=200)
 
-class ProjectUpdateView(APIView):
+class ProjectUpdateView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def put(self, request, pk):
@@ -790,8 +804,20 @@ class ProjectUpdateView(APIView):
 
 def fetch_doi_metadata(doi):
     """Fetch metadata for a given DOI from Crossref API."""
+    import re
+
+    # Validate DOI format to prevent SSRF attacks
+    # DOI format: 10.XXXX/XXXXX where X can be alphanumeric and some special chars
+    doi_pattern = r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$'
+    if not re.match(doi_pattern, doi, re.IGNORECASE):
+        return {"error": "Invalid DOI format"}
+
     base_url = "https://api.crossref.org/works/"
-    response = requests.get(base_url + doi)
+
+    try:
+        response = requests.get(base_url + doi, timeout=10)
+    except requests.RequestException as e:
+        return {"error": f"Failed to fetch DOI metadata: {str(e)}"}
 
     if response.status_code == 200:
         data = response.json()
@@ -868,7 +894,7 @@ def fetch_doi_metadata(doi):
         return {"error": f"Failed to fetch metadata for DOI {doi}. HTTP Status: {response.status_code}"}
 
 
-class DOIInfoView(APIView):
+class DOIInfoView(RateLimitMixin, APIView):
     def post(self, request):
         """Fetch DOI metadata from Crossref API."""
         doi = request.data.get('doi')
@@ -883,12 +909,22 @@ class DOIInfoView(APIView):
         return Response(metadata, status=status.HTTP_200_OK)
     
 
-class UserListCreateAPIView(APIView):
+class UserListCreateAPIView(RateLimitMixin, APIView):
     permission_classes = [IsAdminUser]  # Only admin/superuser can access
 
     def get(self, request):
-        """List all users except superusers."""
-        users = User.objects.filter(is_superuser=False)
+        """List all users except superusers with pagination."""
+        users = User.objects.filter(is_superuser=False).order_by('id')
+
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        paginated_users = paginator.paginate_queryset(users, request)
+
+        if paginated_users is not None:
+            serializer = UserSerializer(paginated_users, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        # Fallback if pagination fails
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 
@@ -901,11 +937,12 @@ class UserListCreateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserDetailAPIView(APIView):
+class UserDetailAPIView(RateLimitMixin, APIView):
     permission_classes = [IsAdminUser]
 
     def get_object(self, pk):
-        return User.objects.get(pk=pk)
+        from django.shortcuts import get_object_or_404
+        return get_object_or_404(User, pk=pk)
 
     def get(self, request, pk):
         """Retrieve a specific user."""

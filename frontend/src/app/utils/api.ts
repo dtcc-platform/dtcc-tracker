@@ -5,14 +5,17 @@ import { Paper, Project } from "../types/FixedTypes";
 import {User} from "../types/FixedTypes"
 
 const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem("authToken"); // Or use a secure storage method
   const headers = {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
   };
 
-  return fetch(url, { ...options, headers });
+  // Include credentials to send cookies with the request
+  return fetch(url, {
+    ...options,
+    headers,
+    credentials: 'include' // This ensures cookies are sent with the request
+  });
 };
 
 function camelToSnakeCase(obj: any): any {

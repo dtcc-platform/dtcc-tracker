@@ -1,0 +1,8 @@
+[Unit]
+Description=DTCC Tracker Application Target
+Documentation=https://github.com/your-repo/dtcc-tracker
+Requires=network-online.target postgresql.service redis.service
+After=network-online.target postgresql.service redis.service
+
+[Install]
+WantedBy=multi-user.target

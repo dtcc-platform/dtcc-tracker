@@ -1,0 +1,66 @@
+[Unit]
+Description=DTCC Tracker Celery Beat Scheduler
+Documentation=https://github.com/your-repo/dtcc-tracker
+Requires=network-online.target postgresql.service redis.service dtcc-backend.service
+After=network-online.target postgresql.service redis.service dtcc-backend.service
+PartOf=dtcc-tracker.target
+
+[Service]
+Type=simple
+User=dtcc
+Group=dtcc
+
+# Working directory and environment
+WorkingDirectory=/var/www/dtcc-tracker/backend
+Environment="PATH=/var/www/dtcc-tracker/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="DJANGO_SETTINGS_MODULE=backend_paper.settings"
+Environment="PYTHONPATH=/var/www/dtcc-tracker/backend"
+EnvironmentFile=-/var/www/dtcc-tracker/backend/.env
+
+# Celery beat command
+ExecStart=/var/www/dtcc-tracker/venv/bin/celery \
+    -A backend_paper \
+    beat \
+    --loglevel=info \
+    --schedule=/var/www/dtcc-tracker/backend/celerybeat-schedule \
+    --pidfile=/var/run/dtcc/celery-beat.pid
+
+ExecStop=/bin/kill -TERM $MAINPID
+
+# Process management
+Restart=always
+RestartSec=10s
+StartLimitBurst=3
+StartLimitIntervalSec=60
+
+# Resource limits
+CPUWeight=50
+MemoryMax=256M
+MemoryHigh=192M
+TasksMax=10
+LimitNOFILE=1024
+Nice=5
+
+# Security hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/www/dtcc-tracker/backend /var/log/dtcc /var/run/dtcc
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallFilter=@system-service
+CapabilityBoundingSet=
+
+# Logging
+SyslogIdentifier=dtcc-celery-beat
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

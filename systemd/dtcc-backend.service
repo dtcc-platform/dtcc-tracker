@@ -1,0 +1,94 @@
+[Unit]
+Description=DTCC Tracker Backend Service
+Documentation=https://github.com/your-repo/dtcc-tracker
+Requires=network-online.target postgresql.service redis.service
+After=network-online.target postgresql.service redis.service
+Before=nginx.service
+PartOf=dtcc-tracker.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+
+# User and permissions
+User=dtcc
+Group=dtcc
+UMask=0022
+
+# Working directory and environment
+WorkingDirectory=/var/www/dtcc-tracker/backend
+Environment="PATH=/var/www/dtcc-tracker/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="DJANGO_SETTINGS_MODULE=backend_paper.settings"
+Environment="PYTHONPATH=/var/www/dtcc-tracker/backend"
+EnvironmentFile=-/var/www/dtcc-tracker/backend/.env
+
+# Start command with Gunicorn
+ExecStartPre=/var/www/dtcc-tracker/venv/bin/python manage.py check --deploy
+ExecStartPre=/var/www/dtcc-tracker/venv/bin/python manage.py migrate --noinput
+ExecStartPre=/var/www/dtcc-tracker/venv/bin/python manage.py collectstatic --noinput
+ExecStart=/var/www/dtcc-tracker/venv/bin/gunicorn \
+    backend_paper.wsgi:application \
+    --bind unix:/var/www/dtcc-tracker/backend/gunicorn.sock \
+    --workers 3 \
+    --worker-class sync \
+    --worker-connections 1000 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --timeout 30 \
+    --graceful-timeout 30 \
+    --keepalive 5 \
+    --access-logfile /var/log/dtcc/access.log \
+    --error-logfile /var/log/dtcc/error.log \
+    --log-level info \
+    --capture-output \
+    --enable-stdio-inheritance
+
+# Process management
+Restart=always
+RestartSec=10s
+StartLimitBurst=5
+StartLimitIntervalSec=60
+TimeoutStartSec=30
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Resource limits
+CPUWeight=200
+MemoryMax=2G
+MemoryHigh=1.5G
+TasksMax=256
+LimitNOFILE=65536
+Nice=-5
+
+# Security hardening (Context7 best practices)
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/www/dtcc-tracker /var/log/dtcc /tmp
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallFilter=@system-service
+SystemCallErrorNumber=EPERM
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+# Logging
+SyslogIdentifier=dtcc-backend
+StandardOutput=journal
+StandardError=journal
+
+# Watchdog
+WatchdogSec=30s
+
+[Install]
+WantedBy=multi-user.target
+Alias=dtcc-api.service

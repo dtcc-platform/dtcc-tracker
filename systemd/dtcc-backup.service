@@ -1,0 +1,35 @@
+[Unit]
+Description=DTCC Tracker Backup Service
+Documentation=https://github.com/your-repo/dtcc-tracker
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+User=dtcc
+Group=dtcc
+
+# Working directory
+WorkingDirectory=/var/www/dtcc-tracker
+
+# Backup script
+ExecStart=/var/www/dtcc-tracker/scripts/backup.sh
+
+# Resource limits
+CPUWeight=50
+MemoryMax=512M
+Nice=10
+IOWeight=50
+
+# Security
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ReadWritePaths=/var/backups/dtcc /var/www/dtcc-tracker
+
+# Logging
+SyslogIdentifier=dtcc-backup
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
