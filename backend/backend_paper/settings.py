@@ -55,7 +55,7 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,  # Issue a new refresh token when refreshing access token
     "BLACKLIST_AFTER_ROTATION": True,  # Blacklist old refresh tokens
     "ALGORITHM": "HS256",
-    "SIGNING_KEY": SECRET_KEY,  # Ensure this is securely managed
+    "SIGNING_KEY": config('JWT_SECRET_KEY', default=SECRET_KEY),  # Use separate JWT key
     "VERIFYING_KEY": None,
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "id",

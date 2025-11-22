@@ -38,9 +38,10 @@ class StandardResultsSetPagination(PageNumberPagination):
 class CustomTokenVerifyView(TokenVerifyView):
     serializer_class = CustomTokenVerifySerializer
 
-# Bedrock configuration
-BEDROCK_MODEL_ID = "meta.llama3-70b-instruct-v1:0"
-BEDROCK_REGION = "us-west-2"
+# Bedrock configuration - use environment variables
+from decouple import config
+BEDROCK_MODEL_ID = config('BEDROCK_MODEL_ID', default="meta.llama3-70b-instruct-v1:0")
+BEDROCK_REGION = config('BEDROCK_REGION', default="us-west-2")
 
 class ChatbotView(RateLimitMixin, APIView):
     rate_limit_type = 'chat'
@@ -143,7 +144,7 @@ class ChatbotView(RateLimitMixin, APIView):
             
             model_response = json.loads(response["body"].read())
             bot_reply_raw = model_response["generation"]
-            print(f"Raw Bedrock response: {bot_reply_raw}")
+            # Debug logging removed for security
             
             # Extract JSON from the response
             def extract_json_from_response(response_text):
@@ -174,7 +175,7 @@ class ChatbotView(RateLimitMixin, APIView):
                     {"error": "Could not parse response from AI model"},
                     status=500
                 )
-            print(f"Extracted JSON: {json_answer}")
+            # Debug logging removed for security
             
             try:
                 parsed = json.loads(json_answer)
@@ -221,7 +222,7 @@ class ChatbotView(RateLimitMixin, APIView):
             })
 
         except Exception as e:
-            print(f"Error in chatbot: {e}")
+            # Log error securely without exposing sensitive details
             return Response(
                 {"error": "An error occurred while processing your request."},
                 status=500
@@ -264,7 +265,7 @@ class ChatbotView(RateLimitMixin, APIView):
                 return {"success": False, "error": str(serializer.errors)}
                 
         except Exception as e:
-            print(f"Error registering project: {e}")
+            # Log error securely without exposing sensitive details
             return {"success": False, "error": "An unexpected error occurred"}
 
     def _register_paper(self, user, data):
@@ -319,7 +320,7 @@ class ChatbotView(RateLimitMixin, APIView):
                 return {"success": False, "error": str(serializer.errors)}
                 
         except Exception as e:
-            print(f"Error registering paper: {e}")
+            # Log error securely without exposing sensitive details
             return {"success": False, "error": "An unexpected error occurred"}
     
     
@@ -361,7 +362,20 @@ def forgot_password(request):
     POST: { "email": "user@example.com" }
     """
     if request.method == "POST":
-        email = request.POST.get("email") or request.GET.get("email") or ""
+        # Only accept email from POST body, not GET parameters
+        try:
+            data = json.loads(request.body)
+            email = data.get("email", "")
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON format"}, status=400)
+
+        # Validate email format
+        from django.core.validators import validate_email
+        from django.core.exceptions import ValidationError
+        try:
+            validate_email(email)
+        except ValidationError:
+            return JsonResponse({"error": "Invalid email format"}, status=400)
 
         # 1. Find the user by email
         try:
@@ -409,7 +423,6 @@ def forgot_password(request):
         })
 
     return JsonResponse({"error": "Method not allowed."}, status=405)
-@csrf_exempt
 @ratelimit(key='ip', rate='5/m', method='POST')  # 5 login attempts per minute per IP
 def login_view(request):
     if request.method == "POST":
@@ -459,7 +472,6 @@ def login_view(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
-@csrf_exempt
 def logout_view(request):
     """Logout view that clears httpOnly cookies"""
     response = JsonResponse({"message": "Logout successful"}, status=200)
@@ -490,9 +502,9 @@ class PaperListCreateView(RateLimitMixin, CacheMixin, APIView):
             return Response(cached_data)
 
         if request.user.is_superuser:
-            papers = Paper.objects.filter(user=request.user, is_master_copy=True)
+            papers = Paper.objects.filter(user=request.user, is_master_copy=True).select_related('user')
         else:
-            papers = Paper.objects.filter(user=request.user, is_master_copy=False)
+            papers = Paper.objects.filter(user=request.user, is_master_copy=False).select_related('user')
 
         serializer = PaperSerializer(papers, many=True)
 
@@ -584,19 +596,18 @@ class SuperuserBulkUpdateView(RateLimitMixin, APIView):
         
         # Get master copies belonging to this superuser
         papers = Paper.objects.filter(
-            id__in=paper_ids, 
-            user=request.user, 
+            id__in=paper_ids,
+            user=request.user,
             is_master_copy=True
+        ).select_related('user')
+        
+        # Collect all unique DOIs from the master papers
+        dois = papers.values_list('doi', flat=True).distinct()
+
+        # Update all papers with these DOIs in a single query
+        updated_count = Paper.objects.filter(doi__in=dois).update(
+            submission_year=submission_year
         )
-        
-        updated_count = 0
-        
-        for paper in papers:
-            # Update all papers with the same DOI
-            Paper.objects.filter(doi=paper.doi).update(
-                submission_year=submission_year
-            )
-            updated_count += Paper.objects.filter(doi=paper.doi).count()
         
         action = "submitted" if submission_year else "unsubmitted"
         message = f"Successfully {action} {updated_count} papers"
@@ -623,7 +634,7 @@ class SuperuserPaperListView(RateLimitMixin, APIView):
             )
         
         # Get only master copies belonging to this superuser
-        papers = Paper.objects.filter(user=request.user)
+        papers = Paper.objects.filter(user=request.user).select_related('user')
         
         # Optional filters
         submission_year = request.query_params.get('submission_year')
@@ -653,7 +664,7 @@ class SuperuserSubmissionStatsView(RateLimitMixin, APIView):
             )
         
         # Only look at master copies
-        master_papers = Paper.objects.filter(user=request.user, is_master_copy=True)
+        master_papers = Paper.objects.filter(user=request.user, is_master_copy=True).select_related('user')
         
         stats = {
             'total_papers': master_papers.count(),
@@ -793,8 +804,20 @@ class ProjectUpdateView(RateLimitMixin, APIView):
 
 def fetch_doi_metadata(doi):
     """Fetch metadata for a given DOI from Crossref API."""
+    import re
+
+    # Validate DOI format to prevent SSRF attacks
+    # DOI format: 10.XXXX/XXXXX where X can be alphanumeric and some special chars
+    doi_pattern = r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$'
+    if not re.match(doi_pattern, doi, re.IGNORECASE):
+        return {"error": "Invalid DOI format"}
+
     base_url = "https://api.crossref.org/works/"
-    response = requests.get(base_url + doi)
+
+    try:
+        response = requests.get(base_url + doi, timeout=10)
+    except requests.RequestException as e:
+        return {"error": f"Failed to fetch DOI metadata: {str(e)}"}
 
     if response.status_code == 200:
         data = response.json()
@@ -890,8 +913,18 @@ class UserListCreateAPIView(RateLimitMixin, APIView):
     permission_classes = [IsAdminUser]  # Only admin/superuser can access
 
     def get(self, request):
-        """List all users except superusers."""
-        users = User.objects.filter(is_superuser=False)
+        """List all users except superusers with pagination."""
+        users = User.objects.filter(is_superuser=False).order_by('id')
+
+        # Apply pagination
+        paginator = StandardResultsSetPagination()
+        paginated_users = paginator.paginate_queryset(users, request)
+
+        if paginated_users is not None:
+            serializer = UserSerializer(paginated_users, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
+        # Fallback if pagination fails
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)
 
@@ -908,7 +941,8 @@ class UserDetailAPIView(RateLimitMixin, APIView):
     permission_classes = [IsAdminUser]
 
     def get_object(self, pk):
-        return User.objects.get(pk=pk)
+        from django.shortcuts import get_object_or_404
+        return get_object_or_404(User, pk=pk)
 
     def get(self, request, pk):
         """Retrieve a specific user."""

@@ -312,11 +312,14 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         # You can customize which fields to expose
         fields = [
-            'id', 'username', 'email', 'is_superuser', 'is_staff', 
+            'id', 'username', 'email', 'is_superuser', 'is_staff',
             'password'
         ]
-        # Make 'id' read-only and possibly exclude 'password' from being read back
+        # Make 'id' read-only and password write-only for security
         read_only_fields = ['id']
+        extra_kwargs = {
+            'password': {'write_only': True}  # Password should never be exposed in responses
+        }
 
     # By default, if you want to handle password creation or updating properly,
     # you need to override how password is set so it’s hashed:
