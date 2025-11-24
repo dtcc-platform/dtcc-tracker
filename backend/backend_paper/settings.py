@@ -191,6 +191,10 @@ USE_I18N = True
 USE_TZ = True
 
 # Logging configuration
+# Create logs directory if it doesn't exist
+import os
+os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,

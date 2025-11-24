@@ -87,6 +87,10 @@ jobs:
         CORS_ALLOWED_ORIGINS=http://localhost:3000
         EOF
 
+    - name: Create logs directory
+      working-directory: ./backend
+      run: mkdir -p logs
+
     - name: Run migrations
       working-directory: ./backend
       run: python manage.py migrate
@@ -127,7 +131,8 @@ jobs:
 
     - name: Install dependencies
       working-directory: ./frontend
-      run: npm ci
+      run: |
+        npm ci || npm install
 
     - name: Run ESLint
       working-directory: ./frontend
@@ -135,7 +140,7 @@ jobs:
 
     - name: Run tests
       working-directory: ./frontend
-      run: npm test -- --passWithNoTests
+      run: npm test
 
     - name: Build frontend
       working-directory: ./frontend
