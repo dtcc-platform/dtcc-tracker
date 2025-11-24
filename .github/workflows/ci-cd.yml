@@ -98,6 +98,9 @@ jobs:
     - name: Run tests with coverage
       working-directory: ./backend
       run: |
+        # Remove __init__.py from tests directory to avoid import issues
+        rm -f papers/tests/__init__.py
+        # Run tests
         coverage run --source='.' manage.py test papers
         coverage report
         coverage xml
