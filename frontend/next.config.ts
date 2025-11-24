@@ -30,11 +30,6 @@ const nextConfig: NextConfig = {
   // Enable SWC minification for better performance
   swcMinify: true,
 
-  // Optimize CSS
-  experimental: {
-    optimizeCss: true,
-  },
-
   // Reduce bundle size by excluding sourcemaps in production
   productionBrowserSourceMaps: false,
 
