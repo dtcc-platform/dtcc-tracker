@@ -44,8 +44,8 @@ const containerStyle: React.CSSProperties = {
 };
 
 const spinnerStyle: React.CSSProperties = {
-    border: `3px solid ${palette.lightGray}`,
-    borderTop: `3px solid ${palette.primaryGold}`,
+    border: `3px solid #e0e0e0`,
+    borderTop: `3px solid ${palette.gold}`,
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
 };

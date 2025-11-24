@@ -85,7 +85,7 @@ const retryButtonStyle: React.CSSProperties = {
     padding: '0.75rem 2rem',
     borderRadius: '999px',
     border: 'none',
-    backgroundColor: palette.primaryGold,
+    backgroundColor: palette.gold,
     color: palette.deepNavy,
     fontWeight: 600,
     fontSize: '14px',
