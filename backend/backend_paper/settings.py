@@ -11,9 +11,13 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from datetime import timedelta
 from decouple import config, Csv
+
+# Detect if we're running tests
+TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,11 +32,17 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
+if TESTING:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+else:
+    ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 
 # CORS Configuration - Only allow specific origins
 CORS_ALLOW_ALL_ORIGINS = False  # Disable for security
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())
+if TESTING:
+    CORS_ALLOWED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000']
+else:
+    CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())
 CORS_ALLOW_CREDENTIALS = True  # Allow authentication credentials
 # Application definition
 REST_FRAMEWORK = {
@@ -274,7 +284,7 @@ USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Security settings for production
-if not DEBUG:
+if not DEBUG and not TESTING:
     # HTTPS redirect
     SECURE_SSL_REDIRECT = True
 
