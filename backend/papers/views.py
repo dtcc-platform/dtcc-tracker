@@ -562,8 +562,8 @@ class SuperuserPaperUpdateView(RateLimitMixin, APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Get the master copy
-        paper = get_object_or_404(Paper, pk=pk, user=request.user, is_master_copy=True)
+        # Get any master copy (superusers can update any master copy)
+        paper = get_object_or_404(Paper, pk=pk, is_master_copy=True)
         
         serializer = SuperuserPaperSerializer(paper, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
@@ -594,10 +594,9 @@ class SuperuserBulkUpdateView(RateLimitMixin, APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Get master copies belonging to this superuser
+        # Get all master copies (superusers can update any master copy)
         papers = Paper.objects.filter(
             id__in=paper_ids,
-            user=request.user,
             is_master_copy=True
         ).select_related('user')
         
@@ -622,7 +621,7 @@ class SuperuserBulkUpdateView(RateLimitMixin, APIView):
 
 class SuperuserPaperListView(RateLimitMixin, APIView):
     """
-    Superuser sees only their master copies (deduplicated view)
+    Superuser sees all master copies from all users (deduplicated view)
     """
     permission_classes = [permissions.IsAuthenticated]
     
@@ -633,8 +632,8 @@ class SuperuserPaperListView(RateLimitMixin, APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Get only master copies belonging to this superuser
-        papers = Paper.objects.filter(user=request.user).select_related('user')
+        # Get all master copies (superusers can see papers from all users)
+        papers = Paper.objects.filter(is_master_copy=True).select_related('user')
         
         # Optional filters
         submission_year = request.query_params.get('submission_year')
@@ -666,8 +665,8 @@ class SuperuserSubmissionStatsView(RateLimitMixin, APIView):
                 status=status.HTTP_403_FORBIDDEN
             )
         
-        # Only look at master copies
-        master_papers = Paper.objects.filter(user=request.user, is_master_copy=True).select_related('user')
+        # Look at all master copies (superusers see stats for all users)
+        master_papers = Paper.objects.filter(is_master_copy=True).select_related('user')
 
         # Use a single aggregation query for counts
         from django.db.models import Count, Q
