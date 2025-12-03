@@ -633,7 +633,7 @@ class SuperuserPaperListView(RateLimitMixin, APIView):
             )
         
         # Get all master copies (superusers can see papers from all users)
-        papers = Paper.objects.filter(is_master_copy=True).select_related('user')
+        papers = Paper.objects.filter(is_master_copy=True).select_related('user').order_by('-id')
         
         # Optional filters
         submission_year = request.query_params.get('submission_year')
