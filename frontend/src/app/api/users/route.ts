@@ -1,17 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { BASE_URL } from "@/app/types/FixedTypes";
 
 // GET = list users
-export async function GET(req: Request) {
-  // Grab Authorization header from the incoming request
-  const authHeader = req.headers.get("Authorization") || "";
+export async function GET(req: NextRequest) {
+  const accessToken = req.cookies.get('access_token');
 
   const response = await fetch(`${BASE_URL}users/`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      // Forward the same auth header to Django
-      Authorization: authHeader,
+      ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
     },
   });
 
@@ -20,15 +18,15 @@ export async function GET(req: Request) {
 }
 
 // POST = create new user
-export async function POST(req: Request) {
-  const authHeader = req.headers.get("Authorization") || "";
+export async function POST(req: NextRequest) {
+  const accessToken = req.cookies.get('access_token');
   const body = await req.json();
 
   const response = await fetch(`${BASE_URL}users/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: authHeader,
+      ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
     },
     body: JSON.stringify(body),
   });

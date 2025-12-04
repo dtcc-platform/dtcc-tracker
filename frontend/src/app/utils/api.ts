@@ -147,6 +147,28 @@ export const fetchPaper = async (): Promise<Paper[]> => {
   }
 };
 
+export interface MilestoneStats {
+  totalPapers: number;
+  byMilestone: {
+    milestoneProject: string;
+    count: number;
+  }[];
+}
+
+export const fetchPaperMilestoneStats = async (): Promise<MilestoneStats> => {
+  try {
+    const response = await fetchWithAuth(`${PAPER_API}/milestone-stats`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch paper statistics');
+    }
+    const data = await response.json();
+    return convertKeysToCamelCase(data) as MilestoneStats;
+  } catch (error) {
+    console.error('Error fetching paper statistics:', error);
+    return { totalPapers: 0, byMilestone: [] };
+  }
+};
+
 // Create a new paper
 export const createPaper = async (paper: Partial<Paper>) => {
   const snakePaper = camelToSnakeCase(paper)  
@@ -198,8 +220,13 @@ export const updatePaper = async (id: number, paper: Partial<Paper>) => {
   const data = await response.json()
 
   if (!response.ok) {
-    console.error(data.error);
-    throw new Error(data.error || "An error occurred while updating the project");
+    // Handle different error formats from Django
+    const errorMessage = data.error
+      || data.detail
+      || (typeof data === 'object' ? Object.values(data).flat().join(', ') : null)
+      || "An error occurred while updating the paper";
+    console.error(errorMessage);
+    throw new Error(errorMessage);
   }
 
   return data;

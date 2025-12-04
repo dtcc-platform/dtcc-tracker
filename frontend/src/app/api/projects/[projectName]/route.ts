@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { BASE_URL } from "@/app/types/FixedTypes";
 
-export async function DELETE(request: Request, props: { params: Promise<{ projectName: string }> }) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ projectName: string }> }) {
     const params = await props.params;
-    const authHeader = request.headers.get("Authorization");
-    const { projectName} = params;
+    const accessToken = request.cookies.get('access_token');
+    const { projectName } = params;
     const encodedProjectName = encodeURIComponent(projectName);
 
     try {
@@ -12,14 +12,14 @@ export async function DELETE(request: Request, props: { params: Promise<{ projec
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
-                "Authorization": `${authHeader}`,
+                ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
             },
         });
-  
+
         if (!response.ok) {
             return NextResponse.json({ error: "Failed to delete project" }, { status: response.status });
         }
-  
+
         const data = await response.json();
         return NextResponse.json(data, { status: 200 });
     } catch (error) {
@@ -27,19 +27,19 @@ export async function DELETE(request: Request, props: { params: Promise<{ projec
     }
 }
 
-export async function PUT(request: Request, props: { params: Promise<{ projectName: string }> }) {
+export async function PUT(request: NextRequest, props: { params: Promise<{ projectName: string }> }) {
     const params = await props.params;
-    const authHeader = request.headers.get("Authorization");
+    const accessToken = request.cookies.get('access_token');
     const { projectName } = params;
     const encodedProjectName = encodeURIComponent(projectName);
 
     try {
-        const requestData = await request.json(); // Parse request body
+        const requestData = await request.json();
         const response = await fetch(`${BASE_URL}projects/update/${encodedProjectName}/`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `${authHeader}`,
+                ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
             },
             body: JSON.stringify(requestData),
         });
@@ -47,7 +47,7 @@ export async function PUT(request: Request, props: { params: Promise<{ projectNa
         if (!response.ok) {
             const errorData = await response.json();
             if (response.status === 400 && errorData.error === "Project already exists") {
-                return NextResponse.json({error: "Project already exists"}, {status: 409}) // Use 409 Conflict instead of 500
+                return NextResponse.json({error: "Project already exists"}, {status: 409})
             }
             return NextResponse.json(errorData, {status: response.status});
         }

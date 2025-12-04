@@ -90,6 +90,16 @@ class PaperSerializer(serializers.ModelSerializer):
         ]
     )
 
+    # URL field (optional link to the paper)
+    url = serializers.URLField(
+        max_length=500,
+        required=False,
+        allow_blank=True,
+        error_messages={
+            'invalid': 'Please enter a valid URL (e.g., https://example.com/paper)'
+        }
+    )
+
     # Title validation
     title = serializers.CharField(
         max_length=500,
@@ -147,8 +157,8 @@ class PaperSerializer(serializers.ModelSerializer):
             'Digital twin platform',
             'Other'
         ],
-        required=False,
-        allow_blank=True
+        required=True,
+        error_messages={'required': 'Milestone Project is required'}
     )
 
     class Meta:

@@ -423,6 +423,7 @@ def forgot_password(request):
         })
 
     return JsonResponse({"error": "Method not allowed."}, status=405)
+@csrf_exempt
 @ratelimit(key='ip', rate='5/m', method='POST')  # 5 login attempts per minute per IP
 def login_view(request):
     if request.method == "POST":
@@ -472,6 +473,7 @@ def login_view(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 
+@csrf_exempt
 def logout_view(request):
     """Logout view that clears httpOnly cookies"""
     response = JsonResponse({"message": "Logout successful"}, status=200)
@@ -695,6 +697,43 @@ class SuperuserSubmissionStatsView(RateLimitMixin, APIView):
             stats['by_year'][year] = item['count']
         
         return Response(stats)
+
+
+class PaperMilestoneStatsView(RateLimitMixin, APIView):
+    """
+    Get paper counts grouped by milestone project.
+    Regular users see their own papers, superusers see all master copies.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        from django.db.models import Count
+
+        if request.user.is_superuser:
+            papers = Paper.objects.filter(is_master_copy=True)
+        else:
+            papers = Paper.objects.filter(user=request.user, is_master_copy=False)
+
+        # Group by milestone_project and count
+        milestone_stats = papers.values('milestone_project').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
+        # Build response with total
+        total = papers.count()
+        by_milestone = []
+        for item in milestone_stats:
+            milestone = item['milestone_project'] or 'Unassigned'
+            by_milestone.append({
+                'milestone_project': milestone,
+                'count': item['count']
+            })
+
+        return Response({
+            'total_papers': total,
+            'by_milestone': by_milestone
+        })
+
 
 class PaperDeleteView(RateLimitMixin, APIView):
     permission_classes = [permissions.IsAuthenticated]

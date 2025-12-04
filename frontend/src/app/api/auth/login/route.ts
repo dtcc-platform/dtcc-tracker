@@ -18,9 +18,6 @@ export async function POST(req: Request) {
 
     const data = await djangoResponse.json();
 
-    // Extract Set-Cookie headers from Django response to forward them
-    const setCookieHeaders = djangoResponse.headers.get('set-cookie');
-
     // Create response with user data (no tokens in body)
     const response = NextResponse.json({
       user: data.user.username,
@@ -29,13 +26,11 @@ export async function POST(req: Request) {
     }, { status: 200 });
 
     // Forward the httpOnly cookies from Django to the client
-    if (setCookieHeaders) {
-      // Parse and forward each cookie from Django response
-      const cookies = setCookieHeaders.split(', ');
-      cookies.forEach(cookie => {
-        response.headers.append('Set-Cookie', cookie);
-      });
-    }
+    // Use getSetCookie() to properly get all Set-Cookie headers as an array
+    const setCookieHeaders = djangoResponse.headers.getSetCookie();
+    setCookieHeaders.forEach(cookie => {
+      response.headers.append('Set-Cookie', cookie);
+    });
 
     return response;
   } catch (error) {

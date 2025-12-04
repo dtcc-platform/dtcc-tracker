@@ -23,6 +23,7 @@ class Project(models.Model):
 class Paper(models.Model):
     author_name = models.CharField(max_length=255, db_index=True)
     doi = models.CharField(max_length=255, db_index=True)
+    url = models.URLField(max_length=500, blank=True, default="")
     title = models.CharField(max_length=255)
     journal = models.CharField(max_length=255)
     date = models.CharField(max_length=255)

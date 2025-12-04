@@ -11,7 +11,8 @@ urlpatterns = [
 
     path('papers/', PaperListCreateView.as_view(), name='paper-list-create'),
     path('papers/delete/<int:pk>/', PaperDeleteView.as_view(), name='paper-delete'),
-    path('papers/update/<int:pk>/', PaperUpdateView.as_view(), name='paper-update'),  # PUT Route
+    path('papers/update/<int:pk>/', PaperUpdateView.as_view(), name='paper-update'),
+    path('papers/milestone-stats/', PaperMilestoneStatsView.as_view(), name='paper-milestone-stats'),
 
     path('projects/', ProjectListCreateView.as_view(), name='project-list-create'),
     path('projects/delete/<int:pk>/', ProjectDeleteView.as_view(), name='project-delete'),

@@ -1,46 +1,41 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { BASE_URL } from '@/app/types/FixedTypes';
 
-export async function GET(req: Request) {
-  const authHeader = req.headers.get("Authorization");
+export async function GET(req: NextRequest) {
+  const accessToken = req.cookies.get('access_token');
   const response = await fetch(`${BASE_URL}projects/`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `${authHeader}`, // Use stored token
+      ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
     },
   });
-  const papers = await response.json();
-  return NextResponse.json(papers);
+  const projects = await response.json();
+  return NextResponse.json(projects, { status: response.status });
 }
 
 // Handle POST requests
-export async function POST(request: Request) {
-  const authHeader = request.headers.get("Authorization");
+export async function POST(request: NextRequest) {
+  const accessToken = request.cookies.get('access_token');
   const body = await request.json();
   const response = await fetch(`${BASE_URL}projects/`, {
     method: 'POST',
-    headers: { 
-    'Content-Type': 'application/json',
-     "Authorization": `${authHeader}`,
-     },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
+    },
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     const errorData = await response.json();
-    console.log(errorData)
-      if (response.status === 400 && errorData.error === "Duplicate key error") {
-          console.log('Project exists with this project name')
-          return NextResponse.json({error: "Project already exists"}, {status: 500})
-      } else {
-          console.log("An error occurred. Please check your input.");
-          console.log(errorData)
-          return NextResponse.json({error: "An error occured"}, {status: 500})
-      }
+    if (response.status === 400 && errorData.error === "Duplicate key error") {
+      return NextResponse.json({error: "Project already exists"}, {status: 500})
+    }
+    return NextResponse.json(errorData, { status: response.status });
   }
 
-  const createdPaper = await response.json();
-  return NextResponse.json(createdPaper, { status: 201 });
+  const createdProject = await response.json();
+  return NextResponse.json(createdProject, { status: 201 });
 }
 

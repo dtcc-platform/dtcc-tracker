@@ -1,16 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { BASE_URL } from '@/app/types/FixedTypes';
-export async function POST(request: Request) {
+
+export async function POST(request: NextRequest) {
   try {
     const { message } = await request.json();
-    const authHeader = request.headers.get("Authorization");
+    const accessToken = request.cookies.get('access_token');
     const djangoRes = await fetch(`${BASE_URL}chat/`, {
       method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json' ,
-        "Authorization": `${authHeader}`}, 
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
+      },
       body: JSON.stringify({ message }),
-      credentials: 'include',
     });
 
     if (!djangoRes.ok) {
@@ -30,15 +31,15 @@ export async function POST(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("Authorization");
+    const accessToken = request.cookies.get('access_token');
     const djangoRes = await fetch(`${BASE_URL}chat/`, {
       method: 'DELETE',
       headers: {
-        'Content-Type': 'application/json' ,
-        "Authorization": `${authHeader}`},
-      credentials: 'include',
+        'Content-Type': 'application/json',
+        ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
+      },
     });
 
     if (!djangoRes.ok) {

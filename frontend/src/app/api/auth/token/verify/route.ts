@@ -11,13 +11,13 @@ export async function POST(req: NextRequest) {
     }
 
     // Forward the request to Django's token verification endpoint
+    // Django's TokenVerifySerializer expects the token in the request body as JSON
     const djangoResponse = await fetch(`${BASE_URL}auth/token/verify/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Cookie": `access_token=${accessToken.value}`
       },
-      credentials: "include"
+      body: JSON.stringify({ token: accessToken.value })
     });
 
     if (djangoResponse.ok) {

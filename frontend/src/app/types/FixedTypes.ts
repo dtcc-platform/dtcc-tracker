@@ -14,6 +14,7 @@ export interface Paper{
   id?: number
   authorName:string
   doi:string
+  url?: string
   title:string
   journal:string
   date:string

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { BASE_URL } from "@/app/types/FixedTypes";
 
 interface Params {
@@ -6,15 +6,15 @@ interface Params {
 }
 
 // GET single user
-export async function GET(req: Request, props: Params) {
+export async function GET(req: NextRequest, props: Params) {
   const params = await props.params;
-  const authHeader = req.headers.get("Authorization") || "";
+  const accessToken = req.cookies.get('access_token');
 
   const response = await fetch(`${BASE_URL}users/${params.id}/`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: authHeader,
+      ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
     },
   });
 
@@ -23,16 +23,16 @@ export async function GET(req: Request, props: Params) {
 }
 
 // PATCH single user (partial update)
-export async function PATCH(req: Request, props: Params) {
+export async function PATCH(req: NextRequest, props: Params) {
   const params = await props.params;
-  const authHeader = req.headers.get("Authorization") || "";
+  const accessToken = req.cookies.get('access_token');
   const body = await req.json();
 
   const response = await fetch(`${BASE_URL}users/${params.id}/`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: authHeader,
+      ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
     },
     body: JSON.stringify(body),
   });
@@ -42,15 +42,15 @@ export async function PATCH(req: Request, props: Params) {
 }
 
 // DELETE single user
-export async function DELETE(req: Request, props: Params) {
+export async function DELETE(req: NextRequest, props: Params) {
   const params = await props.params;
-  const authHeader = req.headers.get("Authorization") || "";
+  const accessToken = req.cookies.get('access_token');
 
   const response = await fetch(`${BASE_URL}users/${params.id}/`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
-      Authorization: authHeader,
+      ...(accessToken ? { "Cookie": `access_token=${accessToken.value}` } : {}),
     },
   });
 
@@ -59,6 +59,5 @@ export async function DELETE(req: Request, props: Params) {
     return NextResponse.json(errorData, { status: response.status });
   }
 
-  // Return some success message or just a 204
   return NextResponse.json({ detail: "User deleted." }, { status: 200 });
 }

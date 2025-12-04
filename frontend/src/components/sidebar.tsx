@@ -104,6 +104,13 @@ export default function Sidebar({ papers, projects }: SidebarProps) {
           </button>
           {expandedSection === 'papers' && (
             <div style={scrollableContentStyle}>
+              <div style={paperItemStyle}>
+                <div style={titleContainerStyle}>
+                  <Link href="/paper-statistics" style={{...titleStyle, fontWeight: 600}}>
+                    View Statistics
+                  </Link>
+                </div>
+              </div>
               {papers && papers.length > 0 ? (
                 papers.map((paper, index) => (
                   <div key={index} style={paperItemStyle}>
