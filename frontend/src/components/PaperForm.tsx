@@ -9,6 +9,8 @@ interface PaperFormProps {
     setAuthorName: (value: string) => void;
     doi: string;
     setDoi: (value: string) => void;
+    url: string;
+    setUrl: (value: string) => void;
     title: string;
     setTitle: (value: string) => void;
     journal: string;
@@ -30,6 +32,8 @@ const PaperForm: React.FC<PaperFormProps> = ({
     setAuthorName,
     doi,
     setDoi,
+    url,
+    setUrl,
     title,
     setTitle,
     journal,
@@ -151,6 +155,17 @@ const PaperForm: React.FC<PaperFormProps> = ({
                                 onChange={(e) => setDoi(e.target.value)}
                                 style={inputStyle}
                                 required
+                            />
+                        </label>
+
+                        <label style={labelStyle}>
+                            <span style={labelTextStyle}>URL (optional)</span>
+                            <input
+                                type="url"
+                                value={url}
+                                onChange={(e) => setUrl(e.target.value)}
+                                style={inputStyle}
+                                placeholder="https://example.com/paper"
                             />
                         </label>
 

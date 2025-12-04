@@ -301,6 +301,8 @@ const ResultPage: React.FC = () => {
                         setAuthorName={(value) => handleChange(index, 'authorName', value)}
                         doi={paper.doi}
                         setDoi={(value) => handleChange(index, 'doi', value)}
+                        url={paper.url || ''}
+                        setUrl={(value) => handleChange(index, 'url', value)}
                         title={paper.title}
                         setTitle={(value) => handleChange(index, 'title', value)}
                         journal={paper.journal}
@@ -314,7 +316,7 @@ const ResultPage: React.FC = () => {
                         additionalAuthors={paper.additionalAuthors}
                         setAdditionalAuthors={(value) => handleChange(index, 'additionalAuthors', value)}
                         onSave={() => handleSave(index)}
-                        onBack={handleBack} 
+                        onBack={handleBack}
                     />
                 </div>
             ))}

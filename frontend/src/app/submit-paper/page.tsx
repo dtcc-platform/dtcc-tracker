@@ -44,6 +44,7 @@ const InputPage: React.FC = () => {
     const [paper, setPaper] = useState<Paper>({
         authorName: '',
         doi: '',
+        url: '',
         journal: '',
         date: '',
         title: '',
@@ -237,6 +238,8 @@ const InputPage: React.FC = () => {
                         setAuthorName={(value) => handleChange('authorName', value)}
                         doi={paper.doi}
                         setDoi={(value) => handleChange('doi', value)}
+                        url={paper.url || ''}
+                        setUrl={(value) => handleChange('url', value)}
                         title={paper.title}
                         setTitle={(value) => handleChange('title', value)}
                         journal={paper.journal}

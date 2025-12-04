@@ -17,8 +17,9 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
   console.log(paper)
   const [newPaper, setNewPaper] = useState<Paper>({
     authorName: paper.authorName || '-',
-    doi: paper.doi|| '-',
-    title: paper.title|| '-',
+    doi: paper.doi || '-',
+    url: paper.url || '',
+    title: paper.title || '-',
     journal: paper.journal,
     date: paper.date,
     additionalAuthors: paper.additionalAuthors,
@@ -62,6 +63,8 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
         setAuthorName={(value) => handleChange('authorName', value)}
         doi={newPaper.doi}
         setDoi={(value) => handleChange('doi', value)}
+        url={newPaper.url || ''}
+        setUrl={(value) => handleChange('url', value)}
         title={newPaper.title}
         setTitle={(value) => handleChange('title', value)}
         date={newPaper.date}
@@ -75,7 +78,8 @@ export default function EditPaperClient({ paperIndex}: EditPaperClientProps) {
         additionalAuthors={newPaper.additionalAuthors}
         setAdditionalAuthors={(value) => handleChange('additionalAuthors', value)}
         onSave={handleSubmit}
-        onBack={handleBack}     />
+        onBack={handleBack}
+      />
     </div>
   )
   
